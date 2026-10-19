@@ -4,696 +4,447 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VideoLibrary for Mac</title>
-<meta name="description" content="A native macOS app for downloading, organizing and watching videos offline, with beautiful captions, your YouTube feed and a built-in music player.">
+<meta name="description" content="VideoLibrary is a native macOS app that downloads video from YouTube, Nebula and 1,000+ other sites with yt-dlp, keeps it in libraries on your own drives, and plays it with word-timed captions.">
 <meta property="og:title" content="VideoLibrary for Mac">
-<meta property="og:description" content="Download, organize and watch videos offline in a native macOS 26 app.">
-<meta property="og:image" content="https://video.mistr.uk/icon.png">
+<meta property="og:description" content="Download, organize and watch video offline in a native macOS 26 app built on yt-dlp.">
+<meta property="og:image" content="https://video.mistr.uk/shots/library.jpg">
+<meta name="theme-color" content="#0b0b0c">
 <link rel="icon" href="icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* Tokens. Spacing is a 4px scale; type follows a fixed scale. */
 :root {
-  --bg: #07070d;
-  --bg-2: #0e0e18;
-  --text: #f4f4fa;
-  --muted: #a3a3b8;
-  --faint: #6c6c82;
-  --line: rgba(255,255,255,.09);
-  --glass: rgba(255,255,255,.06);
-  --glass-strong: rgba(255,255,255,.11);
-  --accent: #6d5cff;
-  --accent-2: #4f7dff;
-  --accent-3: #b65cff;
-  --radius: 22px;
-  --download: linear-gradient(135deg, #5b7cff, #7a4dff);
+  --bg: #0b0b0c;
+  --surface: #121214;
+  --surface-2: #17171a;
+  --border: #232326;
+  --border-strong: #2e2e33;
+  --text: #ededef;
+  --text-2: #a1a1aa;
+  --text-3: #71717a;
+  --accent: #4a6cf7;
+  --accent-hover: #5b7bff;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px;
+  --s8: 32px; --s10: 40px; --s12: 48px; --s16: 64px; --s20: 80px; --s24: 96px; --s32: 128px;
+
+  --r-md: 8px; --r-lg: 12px;
+
+  --t-xs: 12px; --t-sm: 14px; --t-base: 16px; --t-lg: 18px; --t-xl: 20px;
+  --t-2xl: 24px; --t-3xl: 32px; --t-4xl: 44px; --t-5xl: 60px;
+
+  --container: 1200px;
+  --shadow: 0 24px 64px -24px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.25);
   color-scheme: dark;
 }
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
 body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 400 var(--t-base)/1.6 Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01";
 }
-a { color: inherit; }
-img { max-width: 100%; display: block; }
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, h4 { margin: 0; color: var(--text); font-weight: 600; letter-spacing: -0.02em; }
+p { margin: 0; }
+figure { margin: 0; }
+code, kbd, pre { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace; }
 
-/* Ambient background */
-.aurora {
-  position: fixed; inset: -20vh -20vw auto; height: 120vh; z-index: -1; pointer-events: none;
-  background:
-    radial-gradient(40vw 30vw at 20% 20%, rgba(79,125,255,.28), transparent 70%),
-    radial-gradient(35vw 30vw at 80% 10%, rgba(182,92,255,.22), transparent 70%),
-    radial-gradient(40vw 30vw at 60% 70%, rgba(109,92,255,.14), transparent 70%);
-  filter: blur(20px);
-}
+.container { width: 100%; max-width: var(--container); margin: 0 auto; padding: 0 var(--s6); }
 
-.wrap { width: min(1160px, 100% - 32px); margin-inline: auto; }
+/* Icons: Lucide, 20px, 1.5 stroke, currentColor */
+.i { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
-/* Nav */
-nav {
-  position: sticky; top: 12px; z-index: 50;
-  margin: 12px auto 0; width: min(1160px, 100% - 24px);
-  display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 10px 12px 10px 16px;
-  background: rgba(14,14,24,.6); backdrop-filter: blur(20px) saturate(160%);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  border: 1px solid var(--line); border-radius: 999px;
-}
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; text-decoration: none; }
-.brand img { width: 30px; height: 30px; }
-.nav-links { display: flex; gap: 22px; font-size: 14px; color: var(--muted); }
-.nav-links a { text-decoration: none; }
-.nav-links a:hover { color: var(--text); }
+/* Buttons */
 .btn {
-  display: inline-flex; align-items: center; gap: 8px; justify-content: center;
-  padding: 10px 18px; border-radius: 999px; font-weight: 600; font-size: 14px;
-  text-decoration: none; border: 1px solid transparent; transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-  white-space: nowrap;
+  display: inline-flex; align-items: center; gap: var(--s2); height: 40px; padding: 0 var(--s4);
+  border-radius: var(--r-md); font-size: var(--t-sm); font-weight: 500; border: 1px solid transparent;
+  transition: background-color .15s ease, border-color .15s ease; white-space: nowrap;
 }
-.btn:hover { transform: translateY(-1px); }
-.btn-primary { background: var(--download); color: #fff; box-shadow: 0 8px 30px rgba(109,92,255,.35); }
-.btn-primary:hover { box-shadow: 0 10px 40px rgba(109,92,255,.5); }
-.btn-ghost { background: var(--glass); border-color: var(--line); }
-.btn-ghost:hover { background: var(--glass-strong); }
-.btn-lg { padding: 15px 26px; font-size: 16px; }
-.btn svg { width: 18px; height: 18px; }
+.btn .i { width: 16px; height: 16px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-secondary { background: var(--surface); border-color: var(--border-strong); color: var(--text); }
+.btn-secondary:hover { background: var(--surface-2); }
+.btn:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Header */
+.header { position: sticky; top: 0; z-index: 10; background: rgba(11,11,12,.92); border-bottom: 1px solid var(--border); }
+.header .container { display: flex; align-items: center; height: 64px; gap: var(--s8); }
+.brand { display: flex; align-items: center; gap: var(--s3); font-weight: 600; font-size: var(--t-sm); }
+.brand img { width: 24px; height: 24px; }
+.nav { display: flex; gap: var(--s6); font-size: var(--t-sm); color: var(--text-2); }
+.nav a:hover { color: var(--text); }
+.header-actions { margin-left: auto; display: flex; gap: var(--s3); }
 
 /* Hero */
-.hero { text-align: center; padding: 90px 0 40px; }
-.hero-icon { width: 112px; height: 112px; margin: 0 auto 26px; filter: drop-shadow(0 20px 40px rgba(91,124,255,.45)); }
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
-  padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--glass); margin-bottom: 22px;
-}
-.eyebrow b { color: #c8bfff; font-weight: 600; }
-h1 {
-  font-size: clamp(40px, 7vw, 78px); line-height: 1.02; letter-spacing: -.035em; margin: 0 0 20px; font-weight: 800;
-}
-.grad {
-  background: linear-gradient(120deg, #8fa8ff 0%, #a98bff 45%, #e09bff 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.lede { font-size: clamp(17px, 2.2vw, 21px); color: var(--muted); max-width: 680px; margin: 0 auto 34px; }
-.cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.req { margin-top: 16px; font-size: 13px; color: var(--faint); }
+.hero { padding: var(--s24) 0 var(--s16); }
+.hero-grid { display: grid; grid-template-columns: 7fr 5fr; gap: var(--s16); align-items: end; }
+.label { display: inline-flex; align-items: center; gap: var(--s2); font-size: var(--t-xs); font-weight: 500; color: var(--text-2); text-transform: uppercase; letter-spacing: .08em; }
+.label .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.hero h1 { font-size: var(--t-5xl); line-height: 1.05; letter-spacing: -0.035em; font-weight: 700; margin-top: var(--s6); max-width: 14ch; }
+.hero-copy { color: var(--text-2); font-size: var(--t-lg); line-height: 1.6; max-width: 46ch; }
+.hero-actions { display: flex; gap: var(--s3); flex-wrap: wrap; margin-top: var(--s8); }
+.hero-meta { margin-top: var(--s4); font-size: var(--t-xs); color: var(--text-3); }
 
-/* App window mockup */
-.showcase { padding: 50px 0 30px; perspective: 1800px; }
-.window {
-  position: relative; border-radius: 18px; overflow: hidden;
-  background: #15151f; border: 1px solid rgba(255,255,255,.12);
-  box-shadow: 0 50px 120px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.4), 0 0 120px rgba(109,92,255,.18);
-  transform: rotateX(8deg); transform-origin: center top; transition: transform .8s cubic-bezier(.2,.8,.2,1);
-  aspect-ratio: 16 / 10; display: grid; grid-template-columns: 220px 1fr;
-}
-.window.in { transform: rotateX(0deg); }
-.side { background: rgba(30,30,44,.9); border-right: 1px solid var(--line); padding: 14px 12px; font-size: 13px; }
-.lights { display: flex; gap: 7px; margin: 2px 0 18px 4px; }
-.lights i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
-.lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
-.side h6 { margin: 14px 8px 6px; font-size: 11px; color: var(--faint); font-weight: 600; letter-spacing: .02em; }
-.side .row { display: flex; align-items: center; gap: 9px; padding: 7px 9px; border-radius: 8px; color: #d6d6e4; }
-.side .row.on { background: #2f6bff; color: #fff; }
-.side .row .ic { width: 16px; height: 12px; border-radius: 3px; border: 2px solid currentColor; opacity: .85; }
-.side .row .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: .6; margin-left: 4px; }
-.side .row small { margin-left: auto; color: #ffa24d; font-size: 10px; }
-.main { position: relative; overflow: hidden; padding: 14px 18px 0; }
-.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
-.pill { height: 30px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid var(--line); }
-.pill.t { width: 110px; } .pill.s { width: 30px; } .pill.add { width: 30px; background: #2f6bff; border: 0; }
-.pill.search { margin-left: auto; width: 34%; }
-.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.card { border-radius: 11px; overflow: hidden; background: #1d1d2a; border: 1px solid var(--line); }
-.thumb { aspect-ratio: 16/9; position: relative; }
-.thumb::after {
-  content: attr(data-badge); position: absolute; right: 6px; bottom: 6px; font-size: 9px; font-weight: 700;
-  background: rgba(0,0,0,.75); padding: 2px 5px; border-radius: 4px;
-}
-.t1 { background: linear-gradient(135deg,#1f6feb,#7b2ff7); }
-.t2 { background: linear-gradient(135deg,#f97316,#db2777); }
-.t3 { background: linear-gradient(135deg,#10b981,#0ea5e9); }
-.t4 { background: linear-gradient(135deg,#a855f7,#ec4899); }
-.t5 { background: linear-gradient(135deg,#eab308,#ef4444); }
-.t6 { background: linear-gradient(135deg,#06b6d4,#6366f1); }
-.thumb .shape { position: absolute; inset: 22% 30%; border-radius: 50%; background: rgba(255,255,255,.18); filter: blur(2px); }
-.meta { padding: 8px 9px 10px; background: rgba(255,255,255,.04); backdrop-filter: blur(10px); }
-.meta b { display: block; height: 7px; border-radius: 4px; background: rgba(255,255,255,.75); width: 85%; margin-bottom: 5px; }
-.meta b + b { width: 55%; background: rgba(255,255,255,.35); }
-.meta em { display: block; height: 5px; border-radius: 3px; background: rgba(255,255,255,.18); width: 70%; }
-.music-bar {
-  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(88%, 640px);
-  display: grid; grid-template-columns: 1fr 1.6fr 1fr; align-items: center; gap: 14px;
-  padding: 9px 14px; border-radius: 999px;
-  background: rgba(40,40,58,.55); border: 1px solid rgba(255,255,255,.16);
-  backdrop-filter: blur(18px) saturate(170%); -webkit-backdrop-filter: blur(18px) saturate(170%);
-  box-shadow: 0 10px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
-}
-.mb-song { display: flex; align-items: center; gap: 9px; min-width: 0; }
-.cover { width: 32px; height: 32px; border-radius: 7px; background: linear-gradient(135deg,#fbbf24,#f472b6); flex: none; }
-.mb-song span { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mb-song small { display: block; font-weight: 400; color: var(--muted); font-size: 10px; }
-.mb-center { display: grid; gap: 5px; justify-items: center; }
-.mb-ctrls { display: flex; gap: 14px; align-items: center; }
-.mb-ctrls i { width: 9px; height: 9px; border-radius: 2px; background: rgba(255,255,255,.7); }
-.mb-ctrls i.play { width: 22px; height: 22px; border-radius: 50%; background: #fff; }
-.mb-progress { width: 100%; height: 3px; border-radius: 3px; background: rgba(255,255,255,.18); overflow: hidden; }
-.mb-progress div { height: 100%; width: 40%; background: #fff; animation: prog 12s linear infinite; }
-@keyframes prog { from { width: 8%; } to { width: 92%; } }
-.mb-vol { justify-self: end; width: 70px; height: 3px; border-radius: 3px; background: linear-gradient(90deg,#fff 70%, rgba(255,255,255,.2) 70%); }
+.shot-frame { margin-top: var(--s16); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); padding: var(--s2); box-shadow: var(--shadow); }
+.shot-frame img { border-radius: var(--r-md); width: 100%; }
+
+/* Spec strip */
+.specs { display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.spec { padding: var(--s8) var(--s6); border-left: 1px solid var(--border); }
+.spec:first-child { border-left: 0; padding-left: 0; }
+.spec dt { font-size: var(--t-2xl); font-weight: 600; letter-spacing: -0.02em; }
+.spec dd { margin: var(--s1) 0 0; color: var(--text-2); font-size: var(--t-sm); }
 
 /* Sections */
-section { padding: 90px 0; }
-.section-head { text-align: center; max-width: 720px; margin: 0 auto 50px; }
-.kicker { color: #a99cff; font-weight: 600; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; }
-h2 { font-size: clamp(32px, 4.6vw, 52px); line-height: 1.08; letter-spacing: -.03em; margin: 10px 0 14px; }
-.section-head p { color: var(--muted); font-size: 18px; margin: 0; }
+.section { padding: var(--s32) 0 0; }
+.section-head { display: grid; grid-template-columns: 5fr 7fr; gap: var(--s16); margin-bottom: var(--s16); }
+.section-head h2 { font-size: var(--t-4xl); line-height: 1.1; letter-spacing: -0.03em; }
+.section-head p { color: var(--text-2); font-size: var(--t-lg); align-self: end; max-width: 56ch; }
 
-.bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
-.tile {
-  grid-column: span 2; position: relative; padding: 26px; border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
-  border: 1px solid var(--line); overflow: hidden;
-}
-.tile.wide { grid-column: span 3; }
-.tile.full { grid-column: span 6; }
-.tile h3 { margin: 14px 0 8px; font-size: 20px; letter-spacing: -.01em; }
-.tile p { margin: 0; color: var(--muted); font-size: 15px; }
-.tile ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); font-size: 14.5px; }
-.tile li { margin: 4px 0; }
-.icon {
-  width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center;
-  background: linear-gradient(135deg, rgba(91,124,255,.25), rgba(182,92,255,.25)); border: 1px solid rgba(255,255,255,.1);
-}
-.icon svg { width: 22px; height: 22px; stroke: #cfc7ff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.tile::before {
-  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(400px 160px at var(--mx, 50%) var(--my, 0%), rgba(140,120,255,.14), transparent 70%);
-  opacity: 0; transition: opacity .3s;
-}
-.tile:hover::before { opacity: 1; }
+/* Feature grid: hairline grid, no nested cards */
+.features { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.feature { padding: var(--s8); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.feature .i { color: var(--text-2); }
+.feature h3 { font-size: var(--t-base); margin-top: var(--s5); }
+.feature p { margin-top: var(--s2); color: var(--text-2); font-size: var(--t-sm); line-height: 1.6; }
 
-/* Caption demo */
-.caption-stage {
-  position: relative; margin-top: 18px; border-radius: 16px; aspect-ratio: 16/7; overflow: hidden;
-  background:
-    radial-gradient(60% 80% at 30% 40%, rgba(255,170,90,.35), transparent 70%),
-    radial-gradient(50% 70% at 75% 60%, rgba(120,90,255,.35), transparent 70%),
-    #1a1420;
-  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6%;
-}
-.cap-box {
-  background: rgba(0,0,0,.72); border-radius: 10px; padding: 10px 18px; text-align: center;
-  font-weight: 600; font-size: clamp(14px, 2vw, 22px); line-height: 1.35; min-width: 60%;
-}
-.cap-line { display: block; min-height: 1.35em; }
-.cap-line .w { opacity: 0; transition: opacity .12s; }
-.cap-line .w.on { opacity: 1; }
+/* Showcase rows */
+.row { display: grid; grid-template-columns: 4fr 8fr; gap: var(--s16); align-items: start; }
+.row.reverse { grid-template-columns: 8fr 4fr; }
+.row.reverse .row-copy { order: 2; }
+.row + .row { margin-top: var(--s32); }
+.row-copy { position: sticky; top: calc(64px + var(--s12)); }
+.row-copy h3 { font-size: var(--t-3xl); line-height: 1.15; letter-spacing: -0.025em; margin-top: var(--s4); }
+.row-copy > p { margin-top: var(--s4); color: var(--text-2); }
+.list { list-style: none; margin: var(--s8) 0 0; padding: 0; border-top: 1px solid var(--border); }
+.list li { display: flex; gap: var(--s3); padding: var(--s3) 0; border-bottom: 1px solid var(--border); font-size: var(--t-sm); color: var(--text-2); }
+.list li .i { width: 16px; height: 16px; margin-top: 3px; color: var(--text-3); }
+.list li b { color: var(--text); font-weight: 500; }
+.row .shot-frame { margin-top: 0; }
+.shot-frame.narrow { max-width: 560px; justify-self: end; }
 
-/* Feature rows */
-.split { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: center; }
-.split + .split { margin-top: 90px; }
-.split.flip .copy { order: 2; }
-.copy h3 { font-size: clamp(26px, 3.2vw, 36px); letter-spacing: -.02em; line-height: 1.1; margin: 8px 0 14px; }
-.copy p { color: var(--muted); font-size: 17px; margin: 0 0 16px; }
-.checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.checks li { display: flex; gap: 10px; color: #d5d5e3; font-size: 15.5px; }
-.checks li::before {
-  content: ""; flex: none; width: 18px; height: 18px; margin-top: 3px; border-radius: 50%;
-  background: var(--download) center/11px no-repeat;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.5l4.5-5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), var(--download);
-}
-.panel {
-  border-radius: var(--radius); border: 1px solid var(--line); padding: 22px;
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-  box-shadow: 0 30px 80px rgba(0,0,0,.4);
-}
-
-/* Player mock */
-.player { position: relative; border-radius: 14px; aspect-ratio: 16/9; overflow: hidden;
-  background: radial-gradient(70% 90% at 40% 30%, #3b2a6b, #120e1f 70%); }
-.player .top { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px; padding: 12px;
-  background: linear-gradient(rgba(0,0,0,.55), transparent); }
-.glass-btn { padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
-  background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.2); backdrop-filter: blur(10px); }
-.player .title { font-size: 12px; font-weight: 600; } .player .title small { display: block; color: var(--muted); font-weight: 400; font-size: 10.5px; }
-.player .transport { position: absolute; left: 6%; right: 6%; bottom: 12px; padding: 10px 14px; border-radius: 16px;
-  background: rgba(30,30,40,.55); border: 1px solid rgba(255,255,255,.14); backdrop-filter: blur(16px); }
-.scrub { height: 4px; border-radius: 4px; background: rgba(255,255,255,.2); position: relative; margin-bottom: 9px; }
-.scrub::before { content: ""; position: absolute; inset: 0 62% 0 0; border-radius: 4px; background: #4f8bff; }
-.tbtns { display: flex; gap: 12px; align-items: center; }
-.tbtns i { width: 12px; height: 12px; border-radius: 3px; background: rgba(255,255,255,.75); }
-.tbtns i:last-child { margin-left: auto; }
-.player .cap { position: absolute; left: 50%; bottom: 74px; transform: translateX(-50%); font-size: 13px; font-weight: 600;
-  background: rgba(0,0,0,.7); padding: 6px 12px; border-radius: 8px; white-space: nowrap; }
-.mini { position: absolute; right: 14px; bottom: 14px; width: 30%; aspect-ratio: 16/9; border-radius: 10px;
-  background: linear-gradient(135deg,#0ea5e9,#6366f1); border: 1px solid rgba(255,255,255,.25); box-shadow: 0 10px 30px rgba(0,0,0,.5); display: none; }
-
-/* Suggestions mock */
-.sugg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-.sugg .card .meta { padding: 10px; }
-.dl { margin-top: 8px; display: inline-block; height: 18px; width: 78px; border-radius: 999px; background: #2f6bff; }
-.toggle { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; font-size: 13px; color: var(--muted); }
-.switch { width: 34px; height: 20px; border-radius: 999px; background: #34c759; position: relative; }
-.switch::after { content: ""; position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
-
-/* Music mock */
-.songs { display: grid; gap: 4px; font-size: 13px; }
-.song { display: grid; grid-template-columns: 18px 30px 1fr 1fr 44px; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 8px; }
-.song:hover, .song.on { background: rgba(255,255,255,.06); }
-.song .heart { color: var(--faint); font-size: 12px; } .song.on .heart, .song .heart.l { color: #8f7dff; }
-.song .art { width: 30px; height: 30px; border-radius: 5px; position: relative; display: grid; place-items: center; }
-.song:hover .art::after { content: "▶"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 10px; background: rgba(0,0,0,.5); border-radius: 5px; }
-.song span:nth-child(4) { color: var(--muted); }
-.song span:last-child { color: var(--faint); text-align: right; font-variant-numeric: tabular-nums; }
-
-/* Phone share */
-.phone { width: 200px; margin: 0 auto; aspect-ratio: 9/19; border-radius: 34px; border: 8px solid #26263a; background: #0c0c14; padding: 18px 10px; position: relative; box-shadow: 0 30px 80px rgba(0,0,0,.5); }
-.phone::before { content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 60px; height: 16px; background: #26263a; border-radius: 10px; }
-.phone .card { margin-top: 12px; }
-.qr { width: 120px; height: 120px; border-radius: 12px; margin: 0 auto; background:
-  conic-gradient(from 90deg at 2px 2px, #0000 25%, #fff 0) 0 0/12px 12px, #111; image-rendering: pixelated; border: 8px solid #fff; }
-.share-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px; align-items: center; }
-.arrow { font-size: 28px; color: var(--faint); }
-
-/* Security */
-.sec { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.sec .tile { grid-column: auto; }
+/* Two-column technical blocks */
+.columns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s16); }
+.block h3 { display: flex; align-items: center; gap: var(--s3); font-size: var(--t-xl); }
+.block h3 .i { color: var(--text-2); }
+.block > p { margin-top: var(--s3); color: var(--text-2); }
 
 /* Shortcuts */
-.keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.key { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line); font-size: 14.5px; color: #d5d5e3; }
-kbd { font-family: inherit; font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 7px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); border-bottom-width: 2px; color: #fff; white-space: nowrap; }
+.keys { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: var(--s16); border-top: 1px solid var(--border); }
+.key { display: flex; justify-content: space-between; align-items: center; gap: var(--s4); padding: var(--s3) 0; border-bottom: 1px solid var(--border); font-size: var(--t-sm); color: var(--text-2); }
+kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 var(--s2); margin-left: var(--s1); border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); font-size: var(--t-xs); color: var(--text); }
 
 /* Install */
-.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; counter-reset: s; }
-.step { padding: 24px; border-radius: var(--radius); background: var(--glass); border: 1px solid var(--line); position: relative; }
-.step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--download); font-weight: 700; margin-bottom: 14px; }
-.step h4 { margin: 0 0 6px; font-size: 17px; }
-.step p { margin: 0; color: var(--muted); font-size: 14.5px; }
-code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em; background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--line); word-break: break-word; }
-.terminal { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: #050509; border: 1px solid var(--line); font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: #c9f7c9; overflow-x: auto; white-space: nowrap; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); column-gap: var(--s6); border-top: 1px solid var(--border); counter-reset: step; }
+.steps li { padding-top: var(--s8); counter-increment: step; min-width: 0; }
+.steps li::before { content: counter(step, decimal-leading-zero); display: block; font-size: var(--t-xs); font-weight: 500; color: var(--text-3); margin-bottom: var(--s4); font-variant-numeric: tabular-nums; }
+.steps h4 { font-size: var(--t-base); }
+.steps p { margin-top: var(--s2); color: var(--text-2); font-size: var(--t-sm); }
+.steps a { color: var(--text); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); font-size: var(--t-xs); color: var(--text); overflow-x: auto; }
+.inline-code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; padding: 1px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
 
-/* Final CTA */
-.final { text-align: center; padding: 100px 24px; border-radius: 32px; margin: 40px 0 80px;
-  background: radial-gradient(80% 120% at 50% 0%, rgba(109,92,255,.35), transparent 70%), linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
-  border: 1px solid var(--line); }
-.final img { width: 88px; margin: 0 auto 20px; filter: drop-shadow(0 16px 30px rgba(91,124,255,.5)); }
-.final p { color: var(--muted); font-size: 18px; margin: 0 auto 30px; max-width: 560px; }
+/* CTA */
+.cta { margin-top: var(--s32); padding: var(--s16) 0; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr auto; gap: var(--s8); align-items: center; }
+.cta h2 { font-size: var(--t-3xl); letter-spacing: -0.025em; }
+.cta p { margin-top: var(--s2); color: var(--text-2); }
+.cta .hero-actions { margin-top: 0; }
 
-footer { border-top: 1px solid var(--line); padding: 30px 0 50px; color: var(--faint); font-size: 13.5px; }
-footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
-footer a { color: var(--muted); text-decoration: none; } footer a:hover { color: var(--text); }
-footer nav { position: static; display: flex; gap: 18px; margin: 0; width: auto; padding: 0; background: none; border: 0; backdrop-filter: none; }
+.footer { border-top: 1px solid var(--border); padding: var(--s8) 0 var(--s12); font-size: var(--t-xs); color: var(--text-3); }
+.footer .container { display: flex; justify-content: space-between; gap: var(--s6); flex-wrap: wrap; }
+.footer nav { display: flex; gap: var(--s6); }
+.footer a:hover { color: var(--text); }
 
-/* Reveal */
-.reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1); }
-.reveal.in { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) {
-  .reveal { opacity: 1; transform: none; transition: none; }
-  .window { transform: none; }
-  .mb-progress div { animation: none; }
+@media (max-width: 1024px) {
+  .nav { display: none; }
+  .hero-grid, .section-head, .row, .row.reverse, .columns { grid-template-columns: 1fr; gap: var(--s8); }
+  .row.reverse .row-copy { order: 0; }
+  .row-copy { position: static; }
+  .features { grid-template-columns: repeat(2, 1fr); }
+  .steps { grid-template-columns: repeat(2, 1fr); row-gap: var(--s8); }
 }
-
-/* Responsive */
-@media (max-width: 980px) {
-  .bento { grid-template-columns: repeat(2, 1fr); }
-  .tile, .tile.wide { grid-column: span 1; } .tile.full { grid-column: span 2; }
-  .split { grid-template-columns: 1fr; gap: 30px; } .split.flip .copy { order: 0; }
-  .sec { grid-template-columns: repeat(2, 1fr); }
-  .steps { grid-template-columns: repeat(2, 1fr); }
-  .window { grid-template-columns: 160px 1fr; }
-}
-@media (max-width: 680px) {
-  .nav-links { display: none; }
-  .hero { padding-top: 60px; }
-  .bento, .sec, .steps { grid-template-columns: 1fr; }
-  .tile.full { grid-column: span 1; }
-  .window { grid-template-columns: 1fr; aspect-ratio: 4/5; }
-  .side { display: none; }
-  .grid { grid-template-columns: repeat(2, 1fr); }
-  .music-bar { grid-template-columns: 1fr auto; }
-  .mb-vol { display: none; }
-  .share-grid { grid-template-columns: 1fr; } .arrow { transform: rotate(90deg); justify-self: center; }
-  section { padding: 64px 0; }
+@media (max-width: 640px) {
+  .container { padding: 0 var(--s4); }
+  .hero { padding: var(--s16) 0 var(--s8); }
+  .hero h1 { font-size: 40px; }
+  .section { padding-top: var(--s20); }
+  .section-head { margin-bottom: var(--s10); }
+  .section-head h2 { font-size: var(--t-3xl); }
+  .row-copy h3 { font-size: var(--t-2xl); }
+  .header-actions .btn-secondary { display: none; }
+  .specs { grid-template-columns: 1fr 1fr; }
+  .spec { padding: var(--s6) var(--s4); }
+  .spec:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .spec:nth-child(n+3) { border-top: 1px solid var(--border); }
+  .features, .keys, .steps { grid-template-columns: 1fr; }
+  .feature { padding: var(--s6); }
+  .row + .row { margin-top: var(--s20); }
+  .cta { grid-template-columns: 1fr; margin-top: var(--s20); }
 }
 </style>
 </head>
 <body>
-<div class="aurora" aria-hidden="true"></div>
 
-<nav aria-label="Main">
-  <a class="brand" href="#top"><img src="icon.png" alt="">VideoLibrary</a>
-  <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#player">Player</a>
-    <a href="#music">Music</a>
-    <a href="#privacy">Privacy</a>
-    <a href="#install">Install</a>
-    <a href="https://github.com/Jotspot/VideoLibrary">GitHub</a>
-  </div>
-  <a class="btn btn-primary" href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
-    Download
-  </a>
-</nav>
+<!-- Lucide icons (ISC license) in one sprite, so every icon shares size and stroke -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="download" viewBox="0 0 24 24"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></symbol>
+  <symbol id="github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol>
+  <symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+  <symbol id="alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
+  <symbol id="hd" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M7 9v6M11 9v6M7 12h4M15 9v6h1.5a3 3 0 0 0 0-6Z"/></symbol>
+  <symbol id="drive" viewBox="0 0 24 24"><line x1="22" x2="2" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></symbol>
+  <symbol id="import" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="wifi" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.86a10 10 0 0 1 14 0"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/></symbol>
+  <symbol id="terminal" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></symbol>
+</svg>
 
-<header class="hero wrap" id="top">
-  <img class="hero-icon" src="icon.png" alt="VideoLibrary app icon">
-  <div class="eyebrow">New · <b>Version 1.0</b> for macOS 26 Tahoe</div>
-  <h1>Your videos.<br><span class="grad">Offline, beautifully.</span></h1>
-  <p class="lede">Download from YouTube, Nebula and a thousand other sites, keep everything in libraries on your own drives, and watch in a player with the best captions on the Mac.</p>
-  <div class="cta">
-    <a class="btn btn-primary btn-lg" href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
-      Download for Mac
-    </a>
-    <a class="btn btn-ghost btn-lg" href="https://github.com/Jotspot/VideoLibrary">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
-      View on GitHub
-    </a>
+<header class="header">
+  <div class="container">
+    <a class="brand" href="#top"><img src="icon.png" alt="" width="24" height="24">VideoLibrary</a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#player">Player</a>
+      <a href="#captions">Captions</a>
+      <a href="#music">Music</a>
+      <a href="#security">Security</a>
+      <a href="#install">Install</a>
+    </nav>
+    <div class="header-actions">
+      <a class="btn btn-secondary" href="https://github.com/Jotspot/VideoLibrary"><svg class="i"><use href="#github"/></svg>Source</a>
+      <a class="btn btn-primary" href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip"><svg class="i"><use href="#download"/></svg>Download</a>
+    </div>
   </div>
-  <p class="req">Free and open source · macOS 26 or later · Apple silicon</p>
 </header>
 
-<div class="showcase wrap" aria-hidden="true">
-  <div class="window" id="window">
-    <aside class="side">
-      <div class="lights"><i></i><i></i><i></i></div>
-      <h6>Library</h6>
-      <div class="row on"><span class="ic"></span>Videos</div>
-      <div class="row"><span class="ic"></span>Suggestions</div>
-      <div class="row"><span class="ic"></span>Music</div>
-      <h6>Libraries</h6>
-      <div class="row"><span class="ic"></span>Movies</div>
-      <div class="row"><span class="ic"></span>External SSD</div>
-      <div class="row"><span class="ic"></span>Archive <small>Disconnected</small></div>
-      <h6>Uploaders</h6>
-      <div class="row"><span class="dot"></span>Science Channel</div>
-      <div class="row"><span class="dot"></span>Tech Reviews</div>
-      <div class="row"><span class="dot"></span>Cooking Weekly</div>
-      <div class="row"><span class="dot"></span>Travel Diaries</div>
-    </aside>
-    <div class="main">
-      <div class="toolbar"><span class="pill t"></span><span class="pill s"></span><span class="pill s"></span><span class="pill add"></span><span class="pill search"></span></div>
-      <div class="grid">
-        <div class="card"><div class="thumb t1" data-badge="4K"><span class="shape"></span></div><div class="meta"><b></b><b></b><em></em></div></div>
-        <div class="card"><div class="thumb t2" data-badge="1080p"><span class="shape"></span></div><div class="meta"><b></b><b></b><em></em></div></div>
-        <div class="card"><div class="thumb t3" data-badge="1080p"><span class="shape"></span></div><div class="meta"><b></b><b></b><em></em></div></div>
-        <div class="card"><div class="thumb t4" data-badge="1440p"><span class="shape"></span></div><div class="meta"><b></b><b></b><em></em></div></div>
-        <div class="card"><div class="thumb t5" data-badge="720p"><span class="shape"></span></div><div class="meta"><b></b><b></b><em></em></div></div>
-        <div class="card"><div class="thumb t6" data-badge="1080p"><span class="shape"></span></div><div class="meta"><b></b><b></b><em></em></div></div>
-      </div>
-      <div class="music-bar">
-        <div class="mb-song"><span class="cover"></span><span>Midnight Drive<small>The Example Band</small></span></div>
-        <div class="mb-center"><div class="mb-ctrls"><i></i><i></i><i class="play"></i><i></i><i></i></div><div class="mb-progress"><div></div></div></div>
-        <div class="mb-vol"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<section id="features">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <div class="kicker">Everything in one place</div>
-      <h2>A real Mac app for the videos you love</h2>
-      <p>VideoLibrary wraps the power of yt-dlp in a calm, native interface, so downloading, organizing and watching just work.</p>
-    </div>
-    <div class="bento">
-      <article class="tile wide reveal">
-        <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg></div>
-        <h3>Download from almost anywhere</h3>
-        <p>YouTube, Nebula, Vimeo and over a thousand more sites. Pick Best, 4K, 1440p, 1080p, 720p or 480p and watch live progress with the title shown right away.</p>
-      </article>
-      <article class="tile wide reveal">
-        <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5m0 3h.01"/></svg></div>
-        <h3>Errors you can actually fix</h3>
-        <p>No walls of terminal output. Every failure is explained in plain language with a one-click fix: sign in, update yt-dlp, or try again.</p>
-      </article>
-      <article class="tile reveal">
-        <div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg></div>
-        <h3>HD, guaranteed</h3>
-        <p>Downloads dodge YouTube's 360p-only trap, and low-quality files get a one-click <em>Re-download in HD</em> that keeps your progress.</p>
-      </article>
-      <article class="tile reveal">
-        <div class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
-        <h3>Many libraries</h3>
-        <p>Keep libraries anywhere, including external drives. Disconnected drives wait patiently and come back when you plug them in.</p>
-      </article>
-      <article class="tile reveal">
-        <div class="icon"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6m-3 3 3-3 3 3"/></svg></div>
-        <h3>Import your own videos</h3>
-        <p>Add recordings and clips from anywhere. The file name becomes the title and an early frame the thumbnail.</p>
-      </article>
-      <article class="tile full reveal" id="captions">
-        <div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 12h3m3 0h4M7 15h6"/></svg></div>
-        <h3>Captions that keep up with the speaker</h3>
-        <p>YouTube's auto-captions usually stutter and repeat. VideoLibrary shows each word as it's spoken, two steady lines at a time, in the style you choose: box, per-line boxes, outline or none, any size, font and color, with a live preview.</p>
-        <div class="caption-stage" aria-label="Animated caption example">
-          <div class="cap-box" id="capBox"><span class="cap-line" id="cap1"></span><span class="cap-line" id="cap2"></span></div>
+<main id="top">
+  <section class="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <div>
+          <span class="label"><span class="dot"></span>Version 1.0 · macOS 26</span>
+          <h1>Download video once. Watch it anywhere, offline.</h1>
         </div>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section id="player">
-  <div class="wrap">
-    <div class="split">
-      <div class="copy reveal">
-        <div class="kicker">The player</div>
-        <h3>Edge to edge, with controls that know when to leave</h3>
-        <p>The video fills the window. Move the pointer and the controls float in on Liquid Glass; stop, and they disappear.</p>
-        <ul class="checks">
-          <li>Resize the window to fit each video, then snap back when you leave</li>
-          <li>Picture in Picture and an in-app miniplayer while you browse</li>
-          <li>Frame-by-frame stepping, 0.5×–2× speed and ±10 s skips</li>
-          <li>Resume exactly where you left off</li>
-          <li>Full screen on demand, or every time if you prefer</li>
-        </ul>
-      </div>
-      <div class="panel reveal">
-        <div class="player">
-          <div class="top"><span class="glass-btn">‹ Library</span><span class="title">A Week in the Mountains<small>Travel Diaries · 1080p</small></span></div>
-          <span class="cap">and that's when we saw the view</span>
-          <div class="transport"><div class="scrub"></div><div class="tbtns"><i></i><i></i><i></i><i></i><i></i></div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="split flip" id="suggestions">
-      <div class="copy reveal">
-        <div class="kicker">Suggestions</div>
-        <h3>Your YouTube feed, ready to download</h3>
-        <p>Browse your real Subscriptions or Home feed using your own sign-in, with no developer account needed. Search YouTube from the toolbar and save anything in one click.</p>
-        <ul class="checks">
-          <li>Hide Shorts, plus clips under a length you choose</li>
-          <li>Size estimates before you download</li>
-          <li>Optional YouTube Data API as an advanced fallback</li>
-        </ul>
-      </div>
-      <div class="panel reveal">
-        <div class="toggle">Hide Shorts <span class="switch"></span></div>
-        <div class="sugg">
-          <div class="card"><div class="thumb t3" data-badge="12:40"><span class="shape"></span></div><div class="meta"><b></b><b></b><span class="dl"></span></div></div>
-          <div class="card"><div class="thumb t1" data-badge="21:05"><span class="shape"></span></div><div class="meta"><b></b><b></b><span class="dl"></span></div></div>
-          <div class="card"><div class="thumb t5" data-badge="8:17"><span class="shape"></span></div><div class="meta"><b></b><b></b><span class="dl"></span></div></div>
-          <div class="card"><div class="thumb t4" data-badge="34:52"><span class="shape"></span></div><div class="meta"><b></b><b></b><span class="dl"></span></div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="split" id="music">
-      <div class="copy reveal">
-        <div class="kicker">Music, if you want it</div>
-        <h3>A music player that lives right alongside your videos</h3>
-        <p>Turn on Music in Settings and add folders of songs. Tags and cover art are read automatically, and every folder becomes a playlist.</p>
-        <ul class="checks">
-          <li>Songs, Albums, Artists and Playlists</li>
-          <li>Liked Songs, Recently Played and Most Played</li>
-          <li>Play Next, Add to Queue and a reorderable Up Next</li>
-          <li>A floating glass player bar, media keys and Control Center</li>
-          <li>Your queue is waiting when you come back</li>
-        </ul>
-      </div>
-      <div class="panel reveal">
-        <div class="songs">
-          <div class="song on"><span class="heart">♥</span><span class="art t2"></span><span>Midnight Drive</span><span>The Example Band</span><span>3:42</span></div>
-          <div class="song"><span class="heart l">♥</span><span class="art t6"></span><span>Paper Planets</span><span>Nova Lane</span><span>4:05</span></div>
-          <div class="song"><span class="heart">♡</span><span class="art t3"></span><span>Coastline</span><span>Harbor Lights</span><span>2:58</span></div>
-          <div class="song"><span class="heart l">♥</span><span class="art t4"></span><span>Afterglow</span><span>Nova Lane</span><span>3:31</span></div>
-          <div class="song"><span class="heart">♡</span><span class="art t5"></span><span>Golden Hour</span><span>The Example Band</span><span>4:12</span></div>
-          <div class="song"><span class="heart">♡</span><span class="art t1"></span><span>Static Bloom</span><span>Signal Park</span><span>3:07</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="split flip" id="share">
-      <div class="copy reveal">
-        <div class="kicker">Watch anywhere at home</div>
-        <h3>Your library on your phone, over Wi-Fi</h3>
-        <p>Turn on sharing, scan the QR code, and stream any video in your phone's browser, captions included. Nothing leaves your network.</p>
-        <ul class="checks">
-          <li>Protected by a random access token</li>
-          <li>Repeated wrong guesses are locked out</li>
-          <li>AirDrop any video in one click</li>
-        </ul>
-      </div>
-      <div class="panel reveal">
-        <div class="share-grid">
-          <div class="qr" role="img" aria-label="QR code"></div>
-          <div class="arrow">→</div>
-          <div class="phone">
-            <div class="card"><div class="thumb t1" data-badge="1080p"></div><div class="meta"><b></b><b></b></div></div>
-            <div class="card"><div class="thumb t2" data-badge="4K"></div><div class="meta"><b></b><b></b></div></div>
+        <div>
+          <p class="hero-copy">VideoLibrary is a native SwiftUI app built on yt-dlp. Paste a link from YouTube, Nebula or 1,000+ other sites; it saves an MP4 to a folder you choose and plays it with word-timed captions.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip"><svg class="i"><use href="#download"/></svg>Download for Mac</a>
+            <a class="btn btn-secondary" href="https://github.com/Jotspot/VideoLibrary"><svg class="i"><use href="#github"/></svg>View on GitHub</a>
           </div>
+          <p class="hero-meta">Free, MIT licensed. Apple silicon, macOS 26 or later. 2.6 MB.</p>
+        </div>
+      </div>
+      <figure class="shot-frame">
+        <img src="shots/library.jpg" width="2879" height="1534" alt="The VideoLibrary window: a sidebar of libraries and uploaders next to a grid of downloaded videos with resolution and length badges, and the floating music bar at the bottom.">
+      </figure>
+    </div>
+  </section>
+
+  <div class="container">
+    <dl class="specs">
+      <div class="spec"><dt>1,000+</dt><dd>Sites supported through yt-dlp</dd></div>
+      <div class="spec"><dt>480p–4K</dt><dd>Resolution you choose per download</dd></div>
+      <div class="spec"><dt>AES-GCM</dt><dd>Encryption for saved sign-ins</dd></div>
+      <div class="spec"><dt>0</dt><dd>Accounts, servers or analytics</dd></div>
+    </dl>
+  </div>
+
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-head">
+        <h2>Everything yt-dlp can do, without the terminal.</h2>
+        <p>Downloads, libraries and playback live in one app that stores its index next to your videos, so a library on an external drive works on any Mac you plug it into.</p>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <svg class="i"><use href="#globe"/></svg>
+          <h3>Any site yt-dlp supports</h3>
+          <p>YouTube, Nebula, Vimeo and more. The title appears as soon as yt-dlp picks formats, before captions and thumbnails finish.</p>
+        </div>
+        <div class="feature">
+          <svg class="i"><use href="#alert"/></svg>
+          <h3>Readable errors with a fix</h3>
+          <p>Failures map to a plain explanation and one action: sign in, update yt-dlp or retry. Raw output stays out of the way.</p>
+        </div>
+        <div class="feature">
+          <svg class="i"><use href="#hd"/></svg>
+          <h3>HD by default</h3>
+          <p>Downloads run signed out first, avoiding YouTube's 360p-only response for some accounts. 360p files get a Re-download in HD action that keeps watch progress.</p>
+        </div>
+        <div class="feature">
+          <svg class="i"><use href="#drive"/></svg>
+          <h3>Libraries on any drive</h3>
+          <p>Each library is a folder with its own index. Disconnected drives stay listed and reappear when mounted; videos move between libraries in one step.</p>
+        </div>
+        <div class="feature">
+          <svg class="i"><use href="#import"/></svg>
+          <h3>Import local files</h3>
+          <p>Add recordings and clips you already have. The file name becomes the title and an early frame the thumbnail. Copy into the library or link in place.</p>
+        </div>
+        <div class="feature">
+          <svg class="i"><use href="#terminal"/></svg>
+          <h3>Tools stay current</h3>
+          <p>yt-dlp, ffmpeg and Deno are your Homebrew installs, not bundled copies. Settings shows their versions and updates them in place.</p>
         </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="privacy">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <div class="kicker">Private by design</div>
-      <h2>Your sign-ins never sit in plain text</h2>
-      <p>No accounts, no servers, no tracking. VideoLibrary only talks to the sites you download from.</p>
-    </div>
-    <div class="sec">
-      <article class="tile reveal">
-        <div class="icon"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
-        <h3>Encrypted at rest</h3>
-        <p>Cookies and tokens are sealed with AES-GCM using a key in your macOS Keychain.</p>
-      </article>
-      <article class="tile reveal">
-        <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
-        <h3>Import from any browser</h3>
-        <p>Safari, Chrome, Arc, Dia, Brave, Edge, Firefox, Helium and more, by profile, one service at a time.</p>
-      </article>
-      <article class="tile reveal">
-        <div class="icon"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/><path d="m15 16 2 2 4-4"/></svg></div>
-        <h3>Redacted logs</h3>
-        <p>Tokens and cookies are scrubbed before anything is written to the debug log.</p>
-      </article>
-      <article class="tile reveal">
-        <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg></div>
-        <h3>Self-healing</h3>
-        <p>Plaintext left behind by older versions is found, encrypted and removed on launch.</p>
-      </article>
-    </div>
-  </div>
-</section>
+  <section class="section" id="player">
+    <div class="container">
+      <div class="row">
+        <div class="row-copy">
+          <span class="label">Player</span>
+          <h3>The video fills the window. Controls appear only while you move the pointer.</h3>
+          <p>An AVFoundation player with its own transport bar. Captions sit above the controls, so the two never overlap.</p>
+          <ul class="list">
+            <li><svg class="i"><use href="#check"/></svg><span><b>Fit window to video</b>, then restore the previous size on exit</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Picture in Picture</b> and an in-app miniplayer while browsing</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Frame stepping</b> with , and . at the track's frame rate</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>0.5× to 2×</b> speed, 5 s and 10 s skips</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Resume</b> from the last position, per video</span></li>
+          </ul>
+        </div>
+        <figure class="shot-frame"><img src="shots/player.jpg" width="2813" height="1406" loading="lazy" alt="The player: a video filling the window with a title bar, a caption and the transport bar at the bottom."></figure>
+      </div>
 
-<section id="shortcuts">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <div class="kicker">Keyboard first</div>
-      <h2>Shortcuts you already know</h2>
-    </div>
-    <div class="keys reveal">
-      <div class="key">Play / pause <span><kbd>Space</kbd> <kbd>K</kbd></span></div>
-      <div class="key">Skip 5 seconds <span><kbd>←</kbd> <kbd>→</kbd></span></div>
-      <div class="key">Skip 10 seconds <span><kbd>J</kbd> <kbd>L</kbd></span></div>
-      <div class="key">Step one frame <span><kbd>,</kbd> <kbd>.</kbd></span></div>
-      <div class="key">Volume <span><kbd>↑</kbd> <kbd>↓</kbd></span></div>
-      <div class="key">Mute <kbd>M</kbd></div>
-      <div class="key">Captions <kbd>C</kbd></div>
-      <div class="key">Full screen <kbd>F</kbd></div>
-      <div class="key">Picture in Picture <kbd>I</kbd></div>
-      <div class="key">Back to library <kbd>Esc</kbd></div>
-    </div>
-  </div>
-</section>
+      <div class="row reverse" id="captions">
+        <div class="row-copy">
+          <span class="label">Captions</span>
+          <h3>Auto-captions shown word by word, two stable lines at a time.</h3>
+          <p>YouTube's automatic captions repeat each line as they roll. VideoLibrary reads the per-word timestamps and reveals words as they are spoken, without resizing the caption box.</p>
+          <ul class="list">
+            <li><svg class="i"><use href="#check"/></svg><span><b>Background</b>: one box, a box per line, outline or none</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Type</b>: size, font, weight, color and opacity</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Timing</b>: held through pauses of up to 1.5 s, so the box doesn't flicker</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Presets</b> with a live preview in Settings</span></li>
+          </ul>
+        </div>
+        <figure class="shot-frame narrow"><img src="shots/captions.jpg" width="1109" height="1008" loading="lazy" alt="Settings, Captions tab: a live caption preview above the YouTube, Classic, Large &amp; Clear and Minimal presets."></figure>
+      </div>
 
-<section id="install">
-  <div class="wrap">
-    <div class="section-head reveal">
-      <div class="kicker">Get started</div>
-      <h2>Up and running in a minute</h2>
-      <p>Requires macOS 26 (Tahoe) or later on Apple silicon.</p>
-    </div>
-    <div class="steps">
-      <div class="step reveal"><h4>Download</h4><p>Grab <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip">VideoLibrary.zip</a>, unzip it and move the app to Applications.</p></div>
-      <div class="step reveal"><h4>Allow it to open</h4><p>The app isn't notarized, so the first time open <b>System Settings › Privacy &amp; Security</b> and click <b>Open Anyway</b>.</p></div>
-      <div class="step reveal"><h4>Install the tools</h4><p>Click Install in <b>Settings › Tools</b>, or run:</p><div class="terminal">brew install yt-dlp ffmpeg deno</div></div>
-      <div class="step reveal"><h4>Add a video</h4><p>Click <b>+</b> and paste a link, or pick something from <b>Suggestions</b>. Enjoy.</p></div>
-    </div>
-  </div>
-</section>
+      <div class="row" id="suggestions">
+        <div class="row-copy">
+          <span class="label">Suggestions</span>
+          <h3>Your YouTube Subscriptions or Home feed, one click from your library.</h3>
+          <p>The feed is read through yt-dlp with your own sign-in, so no Google Cloud project is needed. The YouTube Data API is available as an optional fallback.</p>
+          <ul class="list">
+            <li><svg class="i"><use href="#check"/></svg><span><b>Search YouTube</b> from the toolbar</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Hide Shorts</b> and clips under a length you set</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Size estimate</b> for your chosen resolution before downloading</span></li>
+          </ul>
+        </div>
+        <figure class="shot-frame"><img src="shots/suggestions.jpg" width="2667" height="1418" loading="lazy" alt="Suggestions: a grid of videos from the YouTube feed with download buttons."></figure>
+      </div>
 
-<div class="wrap">
-  <div class="final reveal">
-    <img src="icon.png" alt="">
-    <h2>Build your library.</h2>
-    <p>Free, open source, and made for the Mac. Download VideoLibrary 1.0 today.</p>
-    <div class="cta">
-      <a class="btn btn-primary btn-lg" href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip">Download for Mac</a>
-      <a class="btn btn-ghost btn-lg" href="https://github.com/Jotspot/VideoLibrary/releases">Release notes</a>
+      <div class="row reverse" id="music">
+        <div class="row-copy">
+          <span class="label">Music</span>
+          <h3>An optional music player for folders of audio files.</h3>
+          <p>Off by default. Turn it on per library or once for the whole app. Tags and cover art are read with AVFoundation; files are never moved or modified.</p>
+          <ul class="list">
+            <li><svg class="i"><use href="#check"/></svg><span><b>Songs, Albums, Artists, Playlists</b>; each folder is also a playlist</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Liked Songs</b>, Recently Played and Most Played</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Play Next</b>, Add to Queue and a reorderable Up Next</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Media keys</b> and Control Center; the queue is restored on relaunch</span></li>
+          </ul>
+        </div>
+        <figure class="shot-frame"><img src="shots/music.jpg" width="2879" height="1528" loading="lazy" alt="The Music tab: a song table with artwork, artist, album and play counts, with the player bar at the bottom."></figure>
+      </div>
     </div>
-  </div>
-</div>
+  </section>
 
-<footer>
-  <div class="wrap">
-    <span>VideoLibrary · MIT License · Not affiliated with YouTube, Google, Nebula or Apple. Download only content you have the right to.</span>
+  <section class="section" id="security">
+    <div class="container">
+      <div class="section-head">
+        <h2>Sign-ins are encrypted. Nothing leaves your network.</h2>
+        <p>VideoLibrary only connects to the sites you download from. There is no account, telemetry or update server.</p>
+      </div>
+      <div class="columns">
+        <div class="block">
+          <h3><svg class="i"><use href="#lock"/></svg>Credential storage</h3>
+          <p>Cookies and tokens are sealed with AES-GCM using a key held in the macOS Keychain. yt-dlp gets a decrypted cookie file in a private temporary folder for each run, removed when the run ends. Plaintext left by earlier versions is migrated on launch, and the debug log redacts tokens before writing.</p>
+          <ul class="list">
+            <li><svg class="i"><use href="#check"/></svg><span>Import a sign-in from Safari, Chrome, Arc, Dia, Brave, Edge, Firefox and others, per profile</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span>YouTube and Nebula are stored separately; importing one never replaces the other</span></li>
+          </ul>
+        </div>
+        <div class="block">
+          <h3><svg class="i"><use href="#wifi"/></svg>Wi-Fi sharing</h3>
+          <p>Optional. Serves your library to a browser on the same network, with captions as WebVTT. Open it on your phone by scanning a QR code.</p>
+          <ul class="list">
+            <li><svg class="i"><use href="#check"/></svg><span>Random 12-character access token, compared in constant time</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span>An address is locked out after 20 wrong attempts</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span>The OAuth callback server listens on loopback only</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="shortcuts">
+    <div class="container">
+      <div class="section-head">
+        <h2>Keyboard shortcuts</h2>
+        <p>The player uses the same keys as most video sites.</p>
+      </div>
+      <div class="keys">
+        <div class="key">Play or pause <span><kbd>Space</kbd><kbd>K</kbd></span></div>
+        <div class="key">Back or forward 5 seconds <span><kbd>←</kbd><kbd>→</kbd></span></div>
+        <div class="key">Back or forward 10 seconds <span><kbd>J</kbd><kbd>L</kbd></span></div>
+        <div class="key">Previous or next frame <span><kbd>,</kbd><kbd>.</kbd></span></div>
+        <div class="key">Volume <span><kbd>↑</kbd><kbd>↓</kbd></span></div>
+        <div class="key">Mute <span><kbd>M</kbd></span></div>
+        <div class="key">Captions on or off <span><kbd>C</kbd></span></div>
+        <div class="key">Full screen <span><kbd>F</kbd></span></div>
+        <div class="key">Picture in Picture <span><kbd>I</kbd></span></div>
+        <div class="key">Leave full screen or the player <span><kbd>Esc</kbd></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="install">
+    <div class="container">
+      <div class="section-head">
+        <h2>Install</h2>
+        <p>Requires macOS 26 or later on Apple silicon, and Homebrew for the download tools.</p>
+      </div>
+      <ol class="steps">
+        <li><h4>Download</h4><p>Get <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip">VideoLibrary.zip</a>, unzip it and move the app to Applications.</p></li>
+        <li><h4>Allow it to open</h4><p>The app is not notarized. On first launch, open System Settings › Privacy &amp; Security and choose Open Anyway.</p></li>
+        <li><h4>Install the tools</h4><p>Use Settings › Tools, or run:</p><pre>brew install yt-dlp ffmpeg deno</pre></li>
+        <li><h4>Add a video</h4><p>Click <span class="inline-code">+</span> and paste a link, or pick one from Suggestions.</p></li>
+      </ol>
+
+      <div class="cta">
+        <div>
+          <h2>VideoLibrary 1.0</h2>
+          <p>Source, release notes and build history are on GitHub.</p>
+        </div>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip"><svg class="i"><use href="#download"/></svg>Download for Mac</a>
+          <a class="btn btn-secondary" href="https://github.com/Jotspot/VideoLibrary/releases">Release notes</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <span>VideoLibrary is MIT licensed and not affiliated with YouTube, Google, Nebula or Apple. Download only content you have the right to.</span>
     <nav aria-label="Footer">
       <a href="https://github.com/Jotspot/VideoLibrary">GitHub</a>
       <a href="https://github.com/Jotspot/VideoLibrary/releases">Releases</a>
-      <a href="https://github.com/Jotspot/VideoLibrary/issues">Report an issue</a>
+      <a href="https://github.com/Jotspot/VideoLibrary/issues">Issues</a>
     </nav>
   </div>
 </footer>
-
-<script>
-// Reveal on scroll
-const io = new IntersectionObserver(entries => {
-  for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-}, { threshold: 0.12 });
-document.querySelectorAll('.reveal, #window').forEach(el => io.observe(el));
-
-// Spotlight on tiles
-document.querySelectorAll('.tile').forEach(t => t.addEventListener('pointermove', e => {
-  const r = t.getBoundingClientRect();
-  t.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-  t.style.setProperty('--my', (e.clientY - r.top) + 'px');
-}));
-
-// Word-by-word caption demo: two steady lines, words appear as "spoken".
-(() => {
-  const lines = [
-    "So the first thing you'll notice",
-    "is that every word shows up",
-    "right as it's being said,",
-    "and the box never jumps around.",
-    "Two lines at a time,",
-    "nice and calm."
-  ];
-  const l1 = document.getElementById('cap1'), l2 = document.getElementById('cap2');
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const render = (el, text, shown) => {
-    el.innerHTML = text.split(' ').map((w, i) => `<span class="w${i < shown ? ' on' : ''}">${w}</span>`).join(' ');
-  };
-  if (reduce) { render(l1, lines[0], 99); render(l2, lines[1], 99); return; }
-  let i = 0;
-  const playLine = () => {
-    const top = i % 2 === 0, text = lines[i % lines.length];
-    if (top) { render(l1, text, 0); l2.innerHTML = ''; } else { render(l2, text, 0); }
-    const el = top ? l1 : l2, words = text.split(' ').length;
-    let n = 0;
-    const tick = setInterval(() => {
-      n++; render(el, text, n);
-      if (n >= words) { clearInterval(tick); i++; setTimeout(playLine, top ? 250 : 1200); }
-    }, 260);
-  };
-  playLine();
-})();
-</script>
 </body>
 </html>

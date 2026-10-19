@@ -11,6 +11,7 @@ on:
       - "docs/**"
       - "README.md"
       - "LICENSE"
+      - "deploy-site.sh"
   workflow_dispatch:
 
 permissions:

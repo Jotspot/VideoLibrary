@@ -9,3 +9,10 @@ Backups/
 .claude/
 .DS_Store
 *.xcuserstate
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example

@@ -177,6 +177,10 @@ swiftc -target arm64-apple-macosx26.0 -sdk "$(xcrun --sdk macosx --show-sdk-path
 
 Every push to `main` runs [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the app on a macOS 26 runner, ad-hoc signs it, and publishes `VideoLibrary.zip` to the release matching `CFBundleShortVersionString` in `Info.plist`. Pushing without changing the version refreshes that release's download; bump the version to cut a new release.
 
+### Website
+
+The site in `docs/` is hosted on Cloudflare Pages at [video.mistr.uk](https://video.mistr.uk). Publish changes with `./deploy-site.sh` (uses Wrangler; run `npx wrangler login` once).
+
 ## Project layout
 
 ```
@@ -190,7 +194,7 @@ Sources/VideoLibrary/
   Resources/AppIcon.icns
 Vendor/GCDWebServer/        Embedded HTTP server for Wi-Fi sharing
 Tests/                      Subtitle parser tests
-docs/                       The project website (GitHub Pages)
+docs/                       The project website (Cloudflare Pages, video.mistr.uk)
 build.sh                    Builds VideoLibrary.app
 ```
 
