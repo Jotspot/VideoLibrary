@@ -438,7 +438,10 @@ struct SongTable: View {
                     }
                     Text(track.title)
                         .fontWeight(player.current?.id == track.id ? .semibold : .regular)
-                        .foregroundStyle(player.current?.id == track.id ? Color.accentColor : .primary)
+                        // Accent text on the accent selection highlight was
+                        // unreadable, so a selected row keeps the system color.
+                        .foregroundStyle(player.current?.id == track.id && !selection.contains(track.id)
+                                         ? Color.accentColor : .primary)
                         .lineLimit(1)
                 }
                 .rowHover(track.id, in: $hoverCounts)

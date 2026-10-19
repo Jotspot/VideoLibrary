@@ -7,7 +7,7 @@
 <meta name="description" content="VideoLibrary is a native macOS app that downloads video from YouTube, Nebula and 1,000+ other sites with yt-dlp, keeps it in libraries on your own drives, and plays it with word-timed captions.">
 <meta property="og:title" content="VideoLibrary for Mac">
 <meta property="og:description" content="Download, organize and watch video offline in a native macOS 26 app built on yt-dlp.">
-<meta property="og:image" content="https://video.mistr.uk/shots/library.jpg">
+<meta property="og:image" content="https://video.mistr.uk/og.jpg">
 <meta name="theme-color" content="#0b0b0c">
 <link rel="icon" href="icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -127,6 +127,11 @@ code, kbd, pre { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, mo
 .list li b { color: var(--text); font-weight: 500; }
 .row .shot-frame { margin-top: 0; }
 .shot-frame.narrow { max-width: 560px; justify-self: end; }
+/* Window captures with macOS's own shadow: no extra frame. */
+.shot { margin-top: var(--s12); }
+.shot img { width: 100%; }
+.row .shot { margin-top: 0; }
+.shot.narrow { max-width: 600px; justify-self: end; }
 
 /* Two-column technical blocks */
 .columns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s16); }
@@ -240,8 +245,8 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
           <p class="hero-meta">Free, MIT licensed. Apple silicon, macOS 26 or later. 2.6 MB.</p>
         </div>
       </div>
-      <figure class="shot-frame">
-        <img src="shots/library.jpg" width="2879" height="1534" alt="The VideoLibrary window: a sidebar of libraries and uploaders next to a grid of downloaded videos with resolution and length badges, and the floating music bar at the bottom.">
+      <figure class="shot">
+        <img src="shots/library.webp" width="2000" height="1149" alt="The VideoLibrary window: a sidebar of libraries and uploaders next to a grid of downloaded videos with resolution and length badges.">
       </figure>
     </div>
   </section>
@@ -311,7 +316,7 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
             <li><svg class="i"><use href="#check"/></svg><span><b>Resume</b> from the last position, per video</span></li>
           </ul>
         </div>
-        <figure class="shot-frame"><img src="shots/player.jpg" width="2813" height="1406" loading="lazy" alt="The player: a video filling the window with a title bar, a caption and the transport bar at the bottom."></figure>
+        <figure class="shot"><img src="shots/player.webp" width="2000" height="1074" loading="lazy" alt="The player: a video filling the window with a title bar, a caption and the transport bar at the bottom."></figure>
       </div>
 
       <div class="row reverse" id="captions">
@@ -326,7 +331,7 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
             <li><svg class="i"><use href="#check"/></svg><span><b>Presets</b> with a live preview in Settings</span></li>
           </ul>
         </div>
-        <figure class="shot-frame narrow"><img src="shots/captions.jpg" width="1109" height="1008" loading="lazy" alt="Settings, Captions tab: a live caption preview above the YouTube, Classic, Large &amp; Clear and Minimal presets."></figure>
+        <figure class="shot narrow"><img src="shots/captions.webp" width="1344" height="1240" loading="lazy" alt="Settings, Captions tab: a live caption preview above the YouTube, Classic, Large &amp; Clear and Minimal presets."></figure>
       </div>
 
       <div class="row" id="suggestions">
@@ -340,7 +345,7 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
             <li><svg class="i"><use href="#check"/></svg><span><b>Size estimate</b> for your chosen resolution before downloading</span></li>
           </ul>
         </div>
-        <figure class="shot-frame"><img src="shots/suggestions.jpg" width="2667" height="1418" loading="lazy" alt="Suggestions: a grid of videos from the YouTube feed with download buttons."></figure>
+        <figure class="shot"><img src="shots/suggestions.webp" width="2000" height="1139" loading="lazy" alt="Suggestions: a grid of videos from the YouTube feed with download buttons."></figure>
       </div>
 
       <div class="row reverse" id="music">
