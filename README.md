@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip"><b>Download for Mac</b></a> ·
-  <a href="https://jotspot.github.io/VideoLibrary/">Website</a> ·
+  <a href="https://video.mistr.uk/">Website</a> ·
   <a href="https://github.com/Jotspot/VideoLibrary/releases">All releases</a>
 </p>
 
