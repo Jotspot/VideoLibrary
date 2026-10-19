@@ -6,7 +6,7 @@
 
 <p align="center">
   A native macOS app for downloading, organizing and watching videos offline,<br>
-  with a built-in music player. Designed for macOS 26 and Liquid Glass.
+  with a built-in music player. Designed for macOS 26+ and Liquid Glass.
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 
 ---
 
-VideoLibrary is a front end for [yt-dlp](https://github.com/yt-dlp/yt-dlp) that feels like a real Mac app. Paste a link (or pick something from your own YouTube feed), and the video lands in a library you can browse, search, and watch in a clean, edge-to-edge player with great captions. Everything stays on your Mac or your own drives.
+VideoLibrary is a front end and library for [yt-dlp](https://github.com/yt-dlp/yt-dlp) built with Swift. Paste a link (or pick something from your own YouTube feed), and the video lands in a library you can browse, search, and watch in a clean, edge-to-edge player with great captions. Everything stays on your Mac or your own drives.
 
 ## Contents
 
