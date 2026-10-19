@@ -1,0 +1,11 @@
+# Build output
+.build/
+VideoLibrary.app/
+*.zip
+
+# Local-only
+CLAUDE.md
+Backups/
+.claude/
+.DS_Store
+*.xcuserstate

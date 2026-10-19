@@ -1,0 +1,80 @@
+name: Build & Release
+
+# Every push to main builds the app and publishes it to the release for the
+# version in Info.plist (CFBundleShortVersionString). Pushing again without
+# changing the version refreshes that release's download; bump the version
+# to start a new release.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "LICENSE"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swiftc --version
+          xcrun --sdk macosx --show-sdk-version
+
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
+          SHORT="${VERSION%.0}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "title=VideoLibrary $SHORT" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp build number
+        run: /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" Info.plist
+
+      - name: Build
+        run: ./build.sh
+
+      - name: Sign (ad-hoc) and package
+        run: |
+          codesign --force --deep --sign - VideoLibrary.app
+          codesign --verify --verbose VideoLibrary.app
+          ditto -c -k --sequesterRsrc --keepParent VideoLibrary.app VideoLibrary.zip
+          shasum -a 256 VideoLibrary.zip | tee VideoLibrary.zip.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VideoLibrary-${{ steps.version.outputs.version }}-build${{ github.run_number }}
+          path: VideoLibrary.zip
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          TITLE: ${{ steps.version.outputs.title }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Same version: point the tag at this commit and replace the download.
+            git tag -f "$TAG"
+            git push -f origin "refs/tags/$TAG"
+            gh release upload "$TAG" VideoLibrary.zip VideoLibrary.zip.sha256 --clobber
+            gh release edit "$TAG" --title "$TITLE" --latest
+          else
+            gh release create "$TAG" VideoLibrary.zip VideoLibrary.zip.sha256 \
+              --title "$TITLE" \
+              --target "$GITHUB_SHA" \
+              --latest \
+              --notes-file .github/release-notes.md
+          fi
