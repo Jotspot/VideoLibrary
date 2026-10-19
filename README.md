@@ -175,7 +175,7 @@ swiftc -target arm64-apple-macosx26.0 -sdk "$(xcrun --sdk macosx --show-sdk-path
 
 ### Releases
 
-Every push to `main` runs [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the app on a macOS 26 runner, ad-hoc signs it, and publishes `VideoLibrary.zip` to the release matching `CFBundleShortVersionString` in `Info.plist`. Pushing without changing the version refreshes that release's download; bump the version to cut a new release. Versions follow semantic versioning: patch for fixes (1.0.0 → 1.0.1), minor for new features.
+Every push to `main` runs [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the app on a macOS 26 runner, ad-hoc signs it, and publishes `VideoLibrary.zip` to the release matching `CFBundleShortVersionString` in `Info.plist`. Pushing without changing the version refreshes that release's download; bump the version to cut a new release. Versions are `YY.MM.N`: the year, the month, and the release number within that month (26.10.1 is the first release of October 2026).
 
 ### Website
 

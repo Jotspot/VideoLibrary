@@ -37,10 +37,9 @@ jobs:
         id: version
         run: |
           VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
-          SHORT="${VERSION%.0}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "title=VideoLibrary $SHORT" >> "$GITHUB_OUTPUT"
+          echo "title=VideoLibrary $VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Stamp build number
         run: /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" Info.plist
