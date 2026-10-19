@@ -24,7 +24,7 @@ jobs:
   build:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Show toolchain
         run: |
@@ -54,7 +54,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent VideoLibrary.app VideoLibrary.zip
           shasum -a 256 VideoLibrary.zip | tee VideoLibrary.zip.sha256
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: VideoLibrary-${{ steps.version.outputs.version }}-build${{ github.run_number }}
           path: VideoLibrary.zip

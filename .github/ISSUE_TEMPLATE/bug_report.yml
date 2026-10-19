@@ -1,0 +1,39 @@
+name: Bug report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Download problems are often fixed by updating yt-dlp first (Settings › Tools › Update, or `brew upgrade yt-dlp`).
+        Please don't paste cookies, tokens or other sign-in details.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: VideoLibrary version
+      placeholder: "1.0"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "26.1"
+    validations:
+      required: true
+  - type: input
+    id: ytdlp
+    attributes:
+      label: yt-dlp version (for download issues)
+      description: Shown in Settings › Tools.
+  - type: textarea
+    id: details
+    attributes:
+      label: Error message or screenshots
