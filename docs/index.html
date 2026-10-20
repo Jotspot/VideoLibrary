@@ -131,6 +131,9 @@ code, kbd, pre { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, mo
 .shot img { width: 100%; }
 .row .shot { margin-top: 0; }
 .shot.narrow { max-width: 600px; justify-self: end; }
+/* A phone screenshot: shown at phone size, with the screen's rounded corners. */
+.shot.phone { max-width: 320px; justify-self: center; }
+.shot.phone img { border-radius: 40px; border: 1px solid var(--border-strong); }
 
 /* Two-column technical blocks */
 .columns { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s16); }
@@ -217,6 +220,7 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
       <a href="#player">Player</a>
       <a href="#captions">Captions</a>
       <a href="#music">Music</a>
+      <a href="#sharing">Sharing</a>
       <a href="#security">Security</a>
       <a href="#install">Install</a>
     </nav>
@@ -359,6 +363,21 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
           </ul>
         </div>
         <figure class="shot"><img src="shots/music.webp" width="2000" height="1144" loading="lazy" alt="A Music folder playlist: cover art, Play and Shuffle, a song table with likes, artist, album and play counts, and the player bar at the bottom."></figure>
+      </div>
+      <div class="row" id="sharing">
+        <div class="row-copy">
+          <span class="label">Wi-Fi sharing</span>
+          <h3>Watch your library on your phone, streamed from your Mac.</h3>
+          <p>Turn on sharing and scan the QR code. Your phone opens the library in its browser, with no app to install, and videos stream straight from your Mac over your own network.</p>
+          <ul class="list">
+            <li><svg class="i"><use href="#check"/></svg><span><b>Every library</b>, filtered by channel, with titles and lengths</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Seek anywhere</b>: videos stream with byte-range requests, so nothing downloads in full first</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Captions</b> in the same style as the app</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Server battery</b> on the page, so you know when the Mac needs charging</span></li>
+            <li><svg class="i"><use href="#check"/></svg><span><b>Private</b>: the link carries a random access token</span></li>
+          </ul>
+        </div>
+        <figure class="shot phone"><img src="shots/sharing.webp" width="924" height="2000" loading="lazy" alt="The shared library in a phone browser: library and channel pickers, the server's battery level, and video cards with titles, channels and lengths."></figure>
       </div>
     </div>
   </section>
