@@ -12,6 +12,7 @@
 <p align="center">
   <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip"><b>Download for Mac</b></a> ·
   <a href="https://video.mistr.uk/">Website</a> ·
+  <a href="https://video.mistr.uk/changelog.html">Changelog</a> ·
   <a href="https://github.com/Jotspot/VideoLibrary/releases">All releases</a>
 </p>
 
@@ -51,6 +52,8 @@ VideoLibrary is a front end and library for [yt-dlp](https://github.com/yt-dlp/y
 ### Your library
 - **Multiple libraries** in any folder, including external drives. Disconnected drives are shown as such and come back when you plug them in.
 - **Import your own videos.** Add files you didn't download (recordings, clips, anything macOS can play). The file name becomes the title and an early frame becomes the thumbnail. Copy them into the library or leave them where they are.
+- **Take videos out.** Drag any video to the desktop or a Finder folder for a copy, share it through the macOS share menu (AirDrop, Messages, Mail…), or right-click › **Save to Downloads**.
+- **Download straight to Downloads.** Pick **Downloads Folder** in Add Video's "Save to" menu to save just the MP4, without adding it to a library.
 - **Browse by uploader**, search, and sort by title, date added, upload date, length or size. Resolution badges (480p…4K), file sizes and watch progress on every card.
 - **Total library size** at a glance, and moving videos between libraries.
 
@@ -76,7 +79,7 @@ VideoLibrary is a front end and library for [yt-dlp](https://github.com/yt-dlp/y
 
 ### Watch anywhere at home
 - **Share your library over Wi-Fi.** Scan a QR code and watch on your phone or another computer in the browser, with captions. Access is protected by a random token, and repeated wrong guesses are locked out.
-- **AirDrop** any video in one click.
+- **Share** any video through the macOS share menu.
 
 ### Music (optional)
 - Turn it on in **Settings › Music**, for one shared collection or per library (handy for music on an external drive).

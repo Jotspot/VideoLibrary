@@ -59,6 +59,13 @@ struct AddVideoSheet: View {
                         Text(library.isAvailable ? library.name : "\(library.name) (unavailable)")
                             .tag(library.id)
                     }
+                    Divider()
+                    Text("Downloads Folder").tag(Self.downloadsFolderTag)
+                }
+                if savesToDownloads {
+                    Text("Saves just the video file to your Downloads folder. It won't be added to a library.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Picker("Resolution", selection: $resolutionRaw) {
                     ForEach(DownloadResolution.allCases) { Text($0.label).tag($0.rawValue) }
@@ -103,7 +110,7 @@ struct AddVideoSheet: View {
                 Button("Download", systemImage: "arrow.down.circle", action: startDownload)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(trimmedURL.isEmpty || urlProblem != nil || !selectedLibrary.isAvailable)
+                    .disabled(trimmedURL.isEmpty || urlProblem != nil || !(savesToDownloads || selectedLibrary.isAvailable))
             }
         }
         .padding(24)
@@ -139,8 +146,14 @@ struct AddVideoSheet: View {
         store.libraries.first { $0.id == libraryID } ?? store.selectedLibrary
     }
 
+    /// Picker tag for "Downloads Folder" (not a library).
+    private static let downloadsFolderTag = UUID(uuidString: "00000000-0000-0000-0000-00000000D0D0")!
+
+    private var savesToDownloads: Bool { libraryID == Self.downloadsFolderTag }
+
     private var libraryBinding: Binding<UUID> {
-        Binding(get: { selectedLibrary.id }, set: { libraryID = $0 })
+        Binding(get: { savesToDownloads ? Self.downloadsFolderTag : selectedLibrary.id },
+                set: { libraryID = $0 })
     }
 
     private var cookieSummary: String {
@@ -150,7 +163,7 @@ struct AddVideoSheet: View {
     }
 
     private func startDownload() {
-        guard !trimmedURL.isEmpty, urlProblem == nil, selectedLibrary.isAvailable else { return }
+        guard !trimmedURL.isEmpty, urlProblem == nil, savesToDownloads || selectedLibrary.isAvailable else { return }
         store.startDownload(
             url: trimmedURL,
             libraryID: selectedLibrary.id,
@@ -158,7 +171,8 @@ struct AddVideoSheet: View {
             rememberCookies: rememberCookies,
             allowsPlaylist: looksLikePlaylist && downloadPlaylist,
             resolution: DownloadResolution(rawValue: resolutionRaw) ?? .p1080,
-            quality: DownloadQuality(rawValue: qualityRaw) ?? .balanced
+            quality: DownloadQuality(rawValue: qualityRaw) ?? .balanced,
+            toDownloadsFolder: savesToDownloads
         )
         dismiss()
     }

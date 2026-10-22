@@ -739,7 +739,8 @@ final class LibraryStore {
         resolution: DownloadResolution,
         quality: DownloadQuality,
         knownTitle: String? = nil,
-        replacingExisting: Bool = false
+        replacingExisting: Bool = false,
+        toDownloadsFolder: Bool = false
     ) -> DownloadTask? {
         let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedURL.isEmpty else { return nil }
@@ -770,10 +771,11 @@ final class LibraryStore {
                 quality: defaults.string(forKey: AppPreference.quality)
                     .flatMap(DownloadQuality.init(rawValue:)) ?? quality,
                 knownTitle: task?.videoItem?.title ?? knownTitle,
-                replacingExisting: replacingExisting
+                replacingExisting: replacingExisting,
+                toDownloadsFolder: toDownloadsFolder
             )
         }
-        guard targetLibrary.isAvailable else {
+        guard toDownloadsFolder || targetLibrary.isAvailable else {
             task.phase = .failed(DownloadFailure(
                 title: "Library unavailable",
                 explanation: unavailableMessage(for: targetLibrary),
@@ -783,8 +785,18 @@ final class LibraryStore {
         }
 
         let libraryID = targetLibrary.id
-        let libraryURL = targetLibrary.url
+        // "Downloads Folder": yt-dlp works in a private temp folder and each
+        // finished video is moved into ~/Downloads; nothing joins a library.
+        let downloadsFolder = toDownloadsFolder
+            ? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+            : nil
+        let libraryURL = toDownloadsFolder
+            ? FileManager.default.temporaryDirectory.appendingPathComponent("VideoLibrary-\(task.id.uuidString)", isDirectory: true)
+            : targetLibrary.url
         let operation = Task {
+            defer {
+                if toDownloadsFolder { try? FileManager.default.removeItem(at: libraryURL) }
+            }
             do {
                 let service = try YtDlpService(outputRoot: libraryURL)
                 var completedVideoCount = 0
@@ -806,6 +818,7 @@ final class LibraryStore {
                     do {
                         try await self.runDownload(
                             task: task, service: service, url: trimmedURL, libraryID: libraryID,
+                            saveToFolder: downloadsFolder,
                             cookiesFromBrowser: cookiesFromBrowser, rememberCookies: rememberCookies,
                             useSignIn: useSignIn, forceOverwrites: replacingExisting,
                             allowsPlaylist: allowsPlaylist, resolution: resolution, quality: quality,
@@ -842,7 +855,7 @@ final class LibraryStore {
 
                 // Captions are often rate-limited (HTTP 429) right after a video
                 // download. The video is already saved; fetch captions later.
-                if !allowsPlaylist, let item = itemsMissingSubtitles.first {
+                if !allowsPlaylist, downloadsFolder == nil, let item = itemsMissingSubtitles.first {
                     await self.retrySubtitles(
                         for: item,
                         url: trimmedURL,
@@ -874,6 +887,7 @@ final class LibraryStore {
         service: YtDlpService,
         url: String,
         libraryID: UUID,
+        saveToFolder: URL?,
         cookiesFromBrowser: BrowserCookieSource,
         rememberCookies: Bool,
         useSignIn: Bool,
@@ -901,6 +915,34 @@ final class LibraryStore {
                     return
                 }
                 throw YtDlpError.invalidOutput
+            }
+
+            if let saveToFolder {
+                // Just the video, named after its title, never overwriting.
+                let ext = (videoPath as NSString).pathExtension
+                let name = item.title
+                    .replacingOccurrences(of: "/", with: "-")
+                    .replacingOccurrences(of: ":", with: " -")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let destination = VideoSharingService.uniqueURL(
+                    for: (name.isEmpty ? item.ytdlpID : name) + (ext.isEmpty ? "" : ".\(ext)"),
+                    in: saveToFolder
+                )
+                let source = URL(fileURLWithPath: videoPath)
+                do {
+                    try FileManager.default.moveItem(at: source, to: destination)
+                } catch {
+                    try FileManager.default.copyItem(at: source, to: destination)
+                }
+                completedVideoCount += 1
+                let finalizedCount = completedVideoCount
+                await MainActor.run {
+                    task.completedVideoCount = finalizedCount
+                    NSWorkspace.shared.activateFileViewerSelecting([destination])
+                }
+                currentItem = nil
+                downloadedVideoPath = nil
+                return
             }
 
             var completedItem = item

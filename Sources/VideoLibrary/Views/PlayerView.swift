@@ -206,12 +206,10 @@ struct PlayerView: View {
             }
 
             if let url = item.videoURL {
-                Button {
-                    VideoSharingService.sendViaAirDrop(url)
-                } label: {
+                ShareLink(item: url) {
                     Label("Share", systemImage: "square.and.arrow.up")
                 }
-                .help("Share via AirDrop")
+                .help("Share")
             }
         }
     }
@@ -250,14 +248,12 @@ struct PlayerView: View {
                 .help("Picture in Picture (I)")
             }
             if let url = item.videoURL {
-                Button {
-                    VideoSharingService.sendViaAirDrop(url)
-                } label: {
+                ShareLink(item: url) {
                     Image(systemName: "square.and.arrow.up")
                 }
                 .buttonStyle(.glass)
                 .controlSize(.large)
-                .help("Share via AirDrop")
+                .help("Share")
             }
         }
         .padding(.horizontal, 24)

@@ -12,6 +12,7 @@ on:
       - "README.md"
       - "LICENSE"
       - "deploy-site.sh"
+      - "CHANGELOG.md"
   workflow_dispatch:
 
 permissions:
@@ -59,6 +60,19 @@ jobs:
           name: VideoLibrary-${{ steps.version.outputs.version }}-build${{ github.run_number }}
           path: VideoLibrary.zip
 
+      - name: Write release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # This version's section of CHANGELOG.md, then the install steps.
+          awk -v v="$VERSION" '
+            /^## / { inside = (index($0, "## " v " ") == 1 || $0 == "## " v); next }
+            inside' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "VideoLibrary $VERSION." > notes.md
+          printf '\n' >> notes.md
+          cat .github/release-notes.md >> notes.md
+          cat notes.md
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -70,11 +84,11 @@ jobs:
             git tag -f "$TAG"
             git push -f origin "refs/tags/$TAG"
             gh release upload "$TAG" VideoLibrary.zip VideoLibrary.zip.sha256 --clobber
-            gh release edit "$TAG" --title "$TITLE" --latest
+            gh release edit "$TAG" --title "$TITLE" --latest --notes-file notes.md
           else
             gh release create "$TAG" VideoLibrary.zip VideoLibrary.zip.sha256 \
               --title "$TITLE" \
               --target "$GITHUB_SHA" \
               --latest \
-              --notes-file .github/release-notes.md
+              --notes-file notes.md
           fi

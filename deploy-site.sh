@@ -9,4 +9,7 @@ cd "$(dirname "$0")"
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Info.plist)
 sed -i '' -E "s#<span data-version>[^<]*</span>#<span data-version>${VERSION}</span>#g" docs/index.html
 
+# The changelog page is generated from CHANGELOG.md.
+python3 scripts/build_changelog.py
+
 npx -y wrangler@4 pages deploy docs --project-name videolibrary --branch main --commit-dirty=true

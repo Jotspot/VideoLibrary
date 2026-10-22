@@ -37,6 +37,8 @@ struct LibraryGridView: View {
                             )
                             .contentShape(.rect)
                             .onTapGesture { play(item) }
+                            // Drag a card to the desktop or any Finder folder for a copy.
+                            .modifier(VideoDragModifier(item: item))
                             .help("Play \u{201C}\(item.title)\u{201D}")
                             .contextMenu {
                                 contextMenu(for: item)
@@ -188,10 +190,13 @@ struct LibraryGridView: View {
         Divider()
 
         if let url = item.videoURL {
+            ShareLink(item: url) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
             Button {
-                VideoSharingService.sendViaAirDrop(url)
+                VideoSharingService.saveToDownloads(item)
             } label: {
-                Label("Share via AirDrop", systemImage: "square.and.arrow.up")
+                Label("Save to Downloads", systemImage: "arrow.down.circle")
             }
         }
 
@@ -216,6 +221,22 @@ struct LibraryGridView: View {
             store.remove(item)
         } label: {
             Label("Delete", systemImage: "trash")
+        }
+    }
+}
+
+/// Makes a downloaded video's card draggable; the drag image is its thumbnail.
+private struct VideoDragModifier: ViewModifier {
+    let item: VideoItem
+
+    func body(content: Content) -> some View {
+        if let url = item.videoURL, item.status == .downloaded {
+            content.draggable(VideoFileDrag(url: url)) {
+                ArtworkView(url: item.thumbnailURL, cornerRadius: 8, placeholderSymbol: "film", maxPixelSize: 320)
+                    .frame(width: 160, height: 90)
+            }
+        } else {
+            content
         }
     }
 }
