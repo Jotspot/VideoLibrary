@@ -52,8 +52,8 @@
   <div class="container">
     <div class="guide-head">
       <div>
-        <span class="label">Thanks for downloading</span>
         <h1>Your download has started.</h1>
+        <span class="label">Thanks for downloading!</span>
       </div>
       <div>
         <p>VideoLibrary <span data-version>26.10.2</span> is saving to your Downloads folder. Installing takes about two minutes. Follow the steps below, even if you've never installed a Mac app from outside the App Store.</p>
@@ -132,6 +132,7 @@
         <div class="step-body">
           <h2>Add your first video</h2>
           <p>Click <b>+</b> in the toolbar and paste a link from YouTube, Nebula or any other supported site. Or open <b>Suggestions</b> and pick something from your feed.</p>
+          <p class="note">Some features need you to sign in: your YouTube feed in Suggestions, age-restricted or members-only videos, and Nebula. Open <b>Settings</b> › <b>Downloads</b> and choose <b>Sign In to YouTube</b> or <b>Import from Browser</b>. Your sign-in is stored encrypted on your Mac.</p>
         </div>
       </li>
     </ol>
@@ -141,8 +142,9 @@
       <ul class="list">
         <li><svg class="i"><use href="#check"/></svg><span><b>No "Open Anyway" button?</b> It only appears for about an hour after you try to open the app. Double-click VideoLibrary again, then go back to Privacy &amp; Security.</span></li>
         <li><svg class="i"><use href="#check"/></svg><span><b>"VideoLibrary is damaged and can't be opened"?</b> Use the Terminal command in step 3. The app isn't damaged; macOS shows this for some unsigned downloads.</span></li>
+        <li><svg class="i"><use href="#check"/></svg><span><b>A video only downloaded in 360p?</b> YouTube is moving to a new streaming format (SABR) that the download tools don't fully support yet, so under some conditions, especially when signed in, YouTube only offers 360p. VideoLibrary downloads without your sign-in first to avoid this, and offers <b>Re-download in HD</b> for any 360p video. Full SABR support is coming in a future version.</span></li>
         <li><svg class="i"><use href="#check"/></svg><span><b>Needs macOS 26</b> (Tahoe) or later on an Apple silicon Mac (M1 or newer).</span></li>
-        <li><svg class="i"><use href="#check"/></svg><span>Still stuck? <a href="https://github.com/Jotspot/VideoLibrary/issues">Open an issue on GitHub</a>.</span></li>
+        <li><svg class="i"><use href="#check"/></svg><span>Still stuck? <a href="https://github.com/Jotspot/VideoLibrary/issues">Open an issue on GitHub</a> (see <a href="https://github.com/orgs/community/discussions/147722#discussioncomment-11641354">best practices</a> for writing a helpful issue).</span></li>
       </ul>
     </div>
   </div>

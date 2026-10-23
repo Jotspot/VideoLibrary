@@ -199,7 +199,8 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
 /* Install guide (thanks.html) */
 .guide { padding: var(--s24) 0 var(--s32); }
 .guide-head { display: grid; grid-template-columns: 7fr 5fr; gap: var(--s16); align-items: start; padding-bottom: var(--s16); }
-.guide-head h1 { font-size: var(--t-5xl); line-height: 1.05; letter-spacing: -0.035em; font-weight: 700; margin-top: var(--s4); max-width: 12ch; }
+.guide-head h1 { font-size: var(--t-5xl); line-height: 1.05; letter-spacing: -0.035em; font-weight: 700; max-width: 12ch; }
+.guide-head h1 + .label { display: block; margin-top: var(--s5); }
 .guide-head p { color: var(--text-2); font-size: var(--t-lg); }
 .guide-head p + p { margin-top: var(--s4); }
 .guide-head .guide-meta { font-size: var(--t-sm); color: var(--text-3); }
