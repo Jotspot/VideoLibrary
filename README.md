@@ -94,7 +94,7 @@ VideoLibrary is a front end and library for [yt-dlp](https://github.com/yt-dlp/y
 
 ## Install
 
-1. **[Download VideoLibrary.zip](https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip)** and unzip it.
+1. **[Download VideoLibrary.zip](https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip)** and unzip it. (New to installing apps from outside the App Store? The [step-by-step install guide](https://video.mistr.uk/thanks.html?preview) walks through every step.)
 2. Move **VideoLibrary.app** to your Applications folder.
 3. Open it. Because the app isn't notarized by Apple, macOS will block it the first time:
    open **System Settings › Privacy & Security**, scroll down, and click **Open Anyway**.

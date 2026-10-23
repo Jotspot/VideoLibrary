@@ -47,7 +47,7 @@
     </nav>
     <div class="header-actions">
       <a class="btn btn-secondary" href="https://github.com/Jotspot/VideoLibrary"><svg class="i"><use href="#github"/></svg>Source</a>
-      <a class="btn btn-primary" href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip"><svg class="i"><use href="#download"/></svg>Download</a>
+      <a class="btn btn-primary" href="thanks.html"><svg class="i"><use href="#download"/></svg>Download</a>
     </div>
   </div>
 </header>
@@ -62,7 +62,7 @@
         <div>
           <p class="hero-copy">VideoLibrary is a native SwiftUI app built on yt-dlp. Paste a link from YouTube, Nebula or 1,000+ other sites; it saves an MP4 to a folder you choose and plays it with word-timed captions.</p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip"><svg class="i"><use href="#download"/></svg><span>Download <span data-version>26.10.2</span> for Mac</span></a>
+            <a class="btn btn-primary" href="thanks.html"><svg class="i"><use href="#download"/></svg><span>Download <span data-version>26.10.2</span> for Mac</span></a>
             <a class="btn btn-secondary" href="https://github.com/Jotspot/VideoLibrary"><svg class="i"><use href="#github"/></svg>View on GitHub</a>
           </div>
           <p class="hero-meta">Free, MIT licensed. Apple silicon, macOS 26 or later. <span data-size>2.6 MB</span>.</p>
@@ -259,7 +259,7 @@
         <p>Requires macOS 26 or later on Apple silicon, and Homebrew for the download tools.</p>
       </div>
       <ol class="steps">
-        <li><h4>Download</h4><p>Get <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip">VideoLibrary.zip</a>, unzip it and move the app to Applications.</p></li>
+        <li><h4>Download</h4><p>Get <a href="thanks.html">VideoLibrary.zip</a>, unzip it and move the app to Applications. The download page walks you through every step.</p></li>
         <li><h4>Allow it to open</h4><p>The app is not notarized. On first launch, open System Settings › Privacy &amp; Security and choose Open Anyway.</p></li>
         <li><h4>Install the tools</h4><p>Use Settings › Tools, or run:</p><pre>brew install yt-dlp ffmpeg deno</pre></li>
         <li><h4>Add a video</h4><p>Click <span class="inline-code">+</span> and paste a link, or pick one from Suggestions.</p></li>
@@ -271,7 +271,7 @@
           <p>What changed in each version is in the changelog.</p>
         </div>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip"><svg class="i"><use href="#download"/></svg><span>Download <span data-version>26.10.2</span> for Mac</span></a>
+          <a class="btn btn-primary" href="thanks.html"><svg class="i"><use href="#download"/></svg><span>Download <span data-version>26.10.2</span> for Mac</span></a>
           <a class="btn btn-secondary" href="changelog.html">Changelog</a>
         </div>
       </div>
@@ -290,18 +290,6 @@
     </nav>
   </div>
 </footer>
-<script>
-// Keep the version and download size in step with the latest GitHub release
-// (the static values are filled in by deploy-site.sh as a fallback).
-fetch('https://api.github.com/repos/Jotspot/VideoLibrary/releases/latest')
-  .then(r => r.ok ? r.json() : Promise.reject())
-  .then(release => {
-    const version = release.tag_name.replace(/^v/, '');
-    document.querySelectorAll('[data-version]').forEach(el => { el.textContent = version; });
-    const zip = release.assets.find(a => a.name === 'VideoLibrary.zip');
-    if (zip) document.querySelectorAll('[data-size]').forEach(el => { el.textContent = (zip.size / 1e6).toFixed(1) + ' MB'; });
-  })
-  .catch(() => {});
-</script>
+<script src="site.js"></script>
 </body>
 </html>

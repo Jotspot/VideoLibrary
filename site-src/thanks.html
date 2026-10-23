@@ -1,0 +1,121 @@
+<!--
+  Body of docs/thanks.html. scripts/build_pages.py wraps it in the site's
+  header and footer. Edit this file, not docs/thanks.html.
+  title: Install VideoLibrary
+  description: How to install VideoLibrary on your Mac, step by step.
+-->
+<main class="guide">
+  <div class="container">
+    <div class="guide-head">
+      <div>
+        <span class="label">Thanks for downloading</span>
+        <h1>Your download has started.</h1>
+      </div>
+      <div>
+        <p>VideoLibrary <span data-version>26.10.2</span> is saving to your Downloads folder. Installing takes about two minutes. Follow the steps below, even if you've never installed a Mac app from outside the App Store.</p>
+        <p class="guide-meta">Didn't start? <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip" id="download-again">Download it again</a>.</p>
+      </div>
+    </div>
+
+    <ol class="install-steps">
+      <li>
+        <div class="step-number">1</div>
+        <div class="step-body">
+          <h2>Unzip it</h2>
+          <p>Open your <b>Downloads</b> folder (in the Dock, or press <kbd>⌥</kbd><kbd>⌘</kbd><kbd>L</kbd> in Finder) and double-click <b>VideoLibrary.zip</b>. A <b>VideoLibrary</b> app appears next to it.</p>
+          <p class="note">Safari sometimes unzips downloads for you. If you already see the app, skip to step 2.</p>
+        </div>
+      </li>
+
+      <li>
+        <div class="step-number">2</div>
+        <div class="step-body">
+          <h2>Move it to Applications</h2>
+          <p>Drag <b>VideoLibrary</b> onto <b>Applications</b> in the Finder sidebar. That keeps it with your other apps, and it shows up in Launchpad and Spotlight.</p>
+        </div>
+      </li>
+
+      <li>
+        <div class="step-number">3</div>
+        <div class="step-body">
+          <h2>Open it the first time</h2>
+          <p>VideoLibrary is free and open source, but it isn't registered with Apple (that costs $99 a year), so macOS stops it the first time with a message that it <i>"could not verify"</i> the app. That's expected. You only need to allow it once.</p>
+
+          <div class="choice">
+            <h3>The easy way: System Settings</h3>
+            <ol class="substeps">
+              <li>Double-click <b>VideoLibrary</b> in Applications. When the warning appears, click <b>Done</b>.</li>
+              <li>Open <b>System Settings</b> and choose <b>Privacy &amp; Security</b> in the sidebar.</li>
+              <li>Scroll down to <b>Security</b>. Next to <i>"VideoLibrary was blocked to protect your Mac"</i>, click <b>Open Anyway</b>.</li>
+              <li>Enter your Mac password (or use Touch ID), then click <b>Open Anyway</b> once more.</li>
+            </ol>
+          </div>
+
+          <div class="choice">
+            <h3>Or: one Terminal command</h3>
+            <p>Open <b>Terminal</b> (search for it with <kbd>⌘</kbd><kbd>Space</kbd>), paste this and press <kbd>Return</kbd>. It removes the "downloaded from the internet" flag, so the app opens normally.</p>
+            <div class="command">
+              <code id="quarantine-command">xattr -dr com.apple.quarantine /Applications/VideoLibrary.app</code>
+              <button class="btn btn-secondary copy" type="button" data-copy="quarantine-command">Copy</button>
+            </div>
+          </div>
+        </div>
+      </li>
+
+      <li>
+        <div class="step-number">4</div>
+        <div class="step-body">
+          <h2>Allow Keychain access</h2>
+          <p>VideoLibrary encrypts your sign-ins with a key it keeps in your Mac's Keychain. The first time it starts, macOS asks whether it may use that key. Enter your password and click <b>Always Allow</b>, so it doesn't ask again.</p>
+        </div>
+      </li>
+
+      <li>
+        <div class="step-number">5</div>
+        <div class="step-body">
+          <h2>Install the download tools</h2>
+          <p>VideoLibrary uses three free tools to download video: yt-dlp, FFmpeg and Deno. In the app, open <b>Settings</b> (<kbd>⌘</kbd><kbd>,</kbd>) › <b>Tools</b> and click <b>Install</b>.</p>
+          <p>This uses <a href="https://brew.sh">Homebrew</a>. If you don't have it, paste the command from brew.sh into Terminal first, or install everything yourself:</p>
+          <div class="command">
+            <code id="tools-command">brew install yt-dlp ffmpeg deno</code>
+            <button class="btn btn-secondary copy" type="button" data-copy="tools-command">Copy</button>
+          </div>
+        </div>
+      </li>
+
+      <li>
+        <div class="step-number">6</div>
+        <div class="step-body">
+          <h2>Add your first video</h2>
+          <p>Click <b>+</b> in the toolbar and paste a link from YouTube, Nebula or any other supported site. Or open <b>Suggestions</b> and pick something from your feed.</p>
+        </div>
+      </li>
+    </ol>
+
+    <div class="guide-help">
+      <h2>Stuck?</h2>
+      <ul class="list">
+        <li><svg class="i"><use href="#check"/></svg><span><b>No "Open Anyway" button?</b> It only appears for about an hour after you try to open the app. Double-click VideoLibrary again, then go back to Privacy &amp; Security.</span></li>
+        <li><svg class="i"><use href="#check"/></svg><span><b>"VideoLibrary is damaged and can't be opened"?</b> Use the Terminal command in step 3. The app isn't damaged; macOS shows this for some unsigned downloads.</span></li>
+        <li><svg class="i"><use href="#check"/></svg><span><b>Needs macOS 26</b> (Tahoe) or later on an Apple silicon Mac (M1 or newer).</span></li>
+        <li><svg class="i"><use href="#check"/></svg><span>Still stuck? <a href="https://github.com/Jotspot/VideoLibrary/issues">Open an issue on GitHub</a>.</span></li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<script>
+// Start the download as soon as the page opens (?preview skips it).
+window.addEventListener('load', () => {
+  if (new URLSearchParams(location.search).has('preview')) return;
+  setTimeout(() => { window.location.href = document.getElementById('download-again').href; }, 400);
+});
+document.querySelectorAll('[data-copy]').forEach(button => {
+  button.addEventListener('click', async () => {
+    const text = document.getElementById(button.dataset.copy).textContent;
+    try { await navigator.clipboard.writeText(text); button.textContent = 'Copied'; }
+    catch { button.textContent = 'Select and copy'; }
+    setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+  });
+});
+</script>

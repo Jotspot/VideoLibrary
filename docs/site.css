@@ -195,3 +195,40 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
   .release { grid-template-columns: 1fr; gap: var(--s4); }
   .release-meta { position: static; }
 }
+
+/* Install guide (thanks.html) */
+.guide { padding: var(--s24) 0 var(--s32); }
+.guide-head { display: grid; grid-template-columns: 7fr 5fr; gap: var(--s16); align-items: start; padding-bottom: var(--s16); }
+.guide-head h1 { font-size: var(--t-5xl); line-height: 1.05; letter-spacing: -0.035em; font-weight: 700; margin-top: var(--s4); max-width: 12ch; }
+.guide-head p { color: var(--text-2); font-size: var(--t-lg); }
+.guide-head p + p { margin-top: var(--s4); }
+.guide-head .guide-meta { font-size: var(--t-sm); color: var(--text-3); }
+.guide a:not(.btn) { color: var(--text); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.install-steps { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.install-steps > li { display: grid; grid-template-columns: 3fr 9fr; gap: var(--s16); padding: var(--s12) 0; border-bottom: 1px solid var(--border); }
+.step-number { width: 40px; height: 40px; border-radius: var(--r-md); border: 1px solid var(--border-strong); background: var(--surface); display: grid; place-items: center; font-weight: 600; font-variant-numeric: tabular-nums; }
+.step-body { min-width: 0; }
+.step-body h2 { font-size: var(--t-2xl); }
+.step-body > p { margin-top: var(--s3); color: var(--text-2); max-width: 64ch; }
+.step-body b { color: var(--text); font-weight: 500; }
+.step-body .note { font-size: var(--t-sm); color: var(--text-3); }
+.choice { margin-top: var(--s6); padding: var(--s6); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
+.choice h3 { font-size: var(--t-base); }
+.choice > p { margin-top: var(--s2); color: var(--text-2); }
+.substeps { margin: var(--s3) 0 0; padding-left: var(--s5); color: var(--text-2); }
+.substeps li { padding: var(--s1) 0; }
+.substeps li::marker { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.command { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); padding: var(--s2) var(--s2) var(--s2) var(--s4); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md); }
+.command code { flex: 1; min-width: 0; font-size: var(--t-sm); color: var(--text); overflow-x: auto; white-space: nowrap; }
+.command .btn { height: 32px; flex: none; }
+.guide-help { display: grid; grid-template-columns: 3fr 9fr; gap: var(--s16); padding-top: var(--s16); }
+.guide-help h2 { font-size: var(--t-2xl); }
+.guide-help .list { margin-top: 0; }
+@media (max-width: 1024px) {
+  .guide-head, .install-steps > li, .guide-help { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+}
+@media (max-width: 640px) {
+  .guide { padding-top: var(--s16); }
+  .guide-head h1 { font-size: 40px; }
+  .choice { padding: var(--s4); }
+}
