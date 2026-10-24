@@ -1,0 +1,26 @@
+<!--
+  A page of the user manual. scripts/build_pages.py builds docs/manual/sabr.html
+  from it and lists it on the manual's index; edit this file, not the output.
+  title: 360p and SABR
+  group: Libraries and Downloads
+  icon: hd
+  order: 7
+  summary: Why some YouTube videos only come in 360p, and how VideoLibrary gets HD anyway.
+-->
+<p>YouTube is moving to a new way of streaming video called <b>SABR</b>. For some accounts and some networks (VPNs and datacenter connections in particular), YouTube offers HD only as SABR streams, and the standard download tools can't save those yet. Without help, those downloads come out in 360p.</p>
+<p>VideoLibrary handles this in steps:</p>
+<ol class="manual-steps">
+  <li>It notices SABR as soon as yt-dlp picks a format, <b>before anything downloads</b>.</li>
+  <li>It tries other YouTube clients that often still get regular HD streams: Safari's, then the TV app's. The downloads panel shows "Getting the HD version…". Signed-in downloads start with Safari's client anyway, so this step is usually skipped.</li>
+  <li>If the <b>SABR add-on</b> is installed, it downloads the video in HD with that.</li>
+  <li>If none of that works, it saves the 360p version and keeps the download in the panel with an <b>Install SABR Add-on &amp; Retry</b> button.</li>
+</ol>
+<h2 id="the-sabr-add-on">The SABR add-on</h2>
+<p>The add-on is a preview build of yt-dlp with SABR support (<a href="https://github.com/yt-dlp/yt-dlp/pull/13515">yt-dlp pull request #13515</a>). It's experimental, so it's never installed up front:</p>
+<ul>
+  <li>A download offers it when it's needed, as above.</li>
+  <li>You can also install it from Settings › <b>Tools</b> › <b>Experimental</b>. Because it's preview software, you'll be asked several times to confirm.</li>
+  <li>It's about 37 MB, checked against its published checksum when installed, and kept in Application Support. It never replaces your Homebrew yt-dlp, and it's only used for videos limited to SABR.</li>
+  <li>Settings › Tools can update or remove it. <code>brew upgrade</code> doesn't update it.</li>
+</ul>
+<p>Already have 360p videos? Library cards flag them, and a banner offers <b>Re-download in HD</b>.</p>

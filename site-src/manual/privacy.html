@@ -1,0 +1,16 @@
+<!--
+  A page of the user manual. scripts/build_pages.py builds docs/manual/privacy.html
+  from it and lists it on the manual's index; edit this file, not the output.
+  title: Privacy and security
+  group: Help
+  icon: lock
+  order: 14
+  summary: What's stored, how it's encrypted, and what the app connects to.
+-->
+<ul>
+  <li>No accounts, no servers, no analytics. VideoLibrary only connects to the sites you download from (and GitHub, if you install the SABR add-on).</li>
+  <li>Sign-ins and tokens are encrypted with AES-GCM using a key kept in your Mac's Keychain, never stored in plain text.</li>
+  <li>yt-dlp gets a decrypted copy of your cookies in a private temporary folder for each download, which is removed when it finishes.</li>
+  <li>The debug log removes tokens and cookies before writing anything.</li>
+  <li>Because the app is signed by its developer rather than Apple, macOS asks for Keychain access once after each update. Choose <b>Always Allow</b>.</li>
+</ul>

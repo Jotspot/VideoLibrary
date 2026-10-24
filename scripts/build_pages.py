@@ -4,11 +4,14 @@
 - docs/changelog.html from CHANGELOG.md
 - docs/<name>.html from each site-src/<name>.html (page body only; a leading
   comment's "title:" and "description:" lines set the page's title)
+- docs/manual/: one page per site-src/manual/<topic>.html (with a sidebar
+  and search), plus an index of every topic and docs/manual/search.js
 
 The header, icon sprite and footer are copied from docs/index.html so every
 page stays in step. Run by deploy-site.sh before every deploy.
 """
 import html
+import json
 import re
 from pathlib import Path
 
@@ -29,7 +32,8 @@ header = block(r'<header class="header">.*?</header>')
 footer = block(r'<footer class="footer">.*?</footer>')
 # In-page links point back at the home page from here.
 header = header.replace('href="#top"', 'href="index.html"')
-header = re.sub(r'href="#([\w-]+)"', r'href="index.html#\1"', header)
+# Only links: <use href="#icon"> must keep pointing at this page's sprite.
+header = re.sub(r'(<a\b[^>]*?)href="#([\w-]+)"', r'\1href="index.html#\2"', header)
 
 
 
@@ -91,8 +95,14 @@ for index_number, release in enumerate(releases):
         </div>
       </article>""")
 
-def write_page(name: str, title: str, description: str, body: str, generated_from: str) -> None:
-    page_header = header.replace(f'<a href="{name}">', f'<a href="{name}" aria-current="page">')
+def rooted(markup: str) -> str:
+    """Makes relative links root-relative, for pages inside docs/manual/."""
+    return re.sub(r'(href|src)="(?!https?:|/|#|mailto:)([^"]*)"', r'\1="/\2"', markup)
+
+
+def write_page(name: str, title: str, description: str, body: str, generated_from: str,
+               current: str | None = None) -> None:
+    page_header = header.replace(f'<a href="{current or name}">', f'<a href="{current or name}" aria-current="page">')
     page = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -120,6 +130,9 @@ def write_page(name: str, title: str, description: str, body: str, generated_fro
 </body>
 </html>
 """
+    if "/" in name:
+        page = rooted(page)
+    (root / "docs" / name).parent.mkdir(parents=True, exist_ok=True)
     (root / "docs" / name).write_text(page)
     print(f"docs/{name}")
 
@@ -143,3 +156,134 @@ for source in sorted((root / "site-src").glob("*.html")):
     body = text[meta.end():] if meta else text
     write_page(source.name, fields.get("title", "VideoLibrary"), fields.get("description", ""),
                body.strip(), f"site-src/{source.name}")
+
+
+# User manual: docs/manual/index.html and one page per topic.
+def front_matter(text: str) -> tuple[dict, list, str]:
+    meta = re.match(r"\s*<!--(.*?)-->\s*", text, re.S)
+    lines = re.findall(r"^\s*(\w+):\s*(.+?)\s*$", meta.group(1), re.M) if meta else []
+    return dict(lines), lines, text[meta.end():] if meta else text
+
+
+manual_dir = root / "site-src/manual"
+index_fields, index_lines, _ = front_matter((manual_dir / "index.html").read_text())
+groups = [tuple(part.strip() for part in value.split("|", 1)) for key, value in index_lines if key == "group"]
+topics = []
+for source in manual_dir.glob("*.html"):
+    if source.name == "index.html":
+        continue
+    fields, _, body = front_matter(source.read_text())
+    topics.append({"slug": source.stem, "body": body.strip(), **fields})
+topics.sort(key=lambda topic: int(topic.get("order", 999)))
+for topic in topics:
+    if topic["group"] not in [name for name, _ in groups]:
+        raise SystemExit(f"site-src/manual/{topic['slug']}.html: unknown group {topic['group']!r}")
+
+
+def icon(name: str) -> str:
+    return f'<svg class="i"><use href="#{name}"/></svg>'
+
+
+def plain(markup: str) -> str:
+    return html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", markup))).strip()
+
+
+def search_box(placeholder: str = "Search the manual") -> str:
+    return f"""<label class="msearch">{icon("search")}<input type="search" placeholder="{placeholder}" aria-label="Search the manual" autocomplete="off" spellcheck="false" data-manual-search><kbd>/</kbd></label>"""
+
+
+def card(topic: dict) -> str:
+    return f"""<a class="mcard" href="/manual/{topic['slug']}">
+          <span class="mcard-icon">{icon(topic.get('icon', 'book'))}</span>
+          <span><span class="mcard-title">{topic['title']}</span><span class="mcard-text">{topic['summary']}</span></span>
+        </a>"""
+
+
+sections = []
+for name, blurb in groups:
+    cards = "\n        ".join(card(topic) for topic in topics if topic["group"] == name)
+    sections.append(f"""    <section class="mgroup" data-group>
+      <div class="mgroup-head"><h2>{name}</h2><p>{blurb}</p></div>
+      <div class="mcards">
+        {cards}
+      </div>
+    </section>""")
+
+first = topics[0]
+shortcuts = next((topic for topic in topics if topic["slug"] == "keyboard-shortcuts"), first)
+index_body = f"""<main class="mindex">
+  <div class="mcontainer">
+    <div class="mhero">
+      <div>
+        <h1>{index_fields['title']}</h1>
+        <p>{index_fields['intro']}</p>
+        <div class="mhero-actions">
+          <a class="btn btn-light" href="/manual/{first['slug']}">{first['title']}</a>
+          <a class="btn btn-secondary" href="/manual/{shortcuts['slug']}">{shortcuts['title']}</a>
+        </div>
+      </div>
+      {search_box()}
+    </div>
+    <div class="mresults" hidden data-manual-results></div>
+{chr(10).join(sections)}
+  </div>
+</main>
+<script>
+// Links to the old one-page manual (manual#sabr) open the topic's page.
+(function () {{
+  var old = {{"shortcuts": "keyboard-shortcuts", "watching": "player", "files-out": "getting-videos-out", "sharing": "wifi-sharing", "files": "where-files-live"}};
+  var hash = location.hash.slice(1);
+  if (hash) location.replace("/manual/" + (old[hash] || hash));
+}})();
+</script>
+<script src="/manual/search.js"></script>"""
+write_page("manual/index.html", f"{index_fields['title']}", index_fields.get("description", ""),
+           index_body, "site-src/manual/", current="manual/")
+
+
+def sidebar(active: str) -> str:
+    parts = []
+    for name, _ in groups:
+        links = "".join(
+            f"""<a href="/manual/{topic['slug']}"{' aria-current="page"' if topic['slug'] == active else ''} data-slug="{topic['slug']}">{topic['title']}</a>"""
+            for topic in topics if topic["group"] == name)
+        parts.append(f"""<div class="mside-group" data-group><p>{name}</p>{links}</div>""")
+    return f"""<aside class="mside">
+      <a class="mside-home" href="/manual/">{icon("book")}<span>VideoLibrary Manual</span></a>
+      {search_box("Search")}
+      <nav class="mside-nav" aria-label="Manual">{"".join(parts)}<p class="mside-empty" hidden data-manual-empty>No matches</p></nav>
+    </aside>"""
+
+
+for number, topic in enumerate(topics):
+    previous = topics[number - 1] if number > 0 else None
+    following = topics[number + 1] if number + 1 < len(topics) else None
+    pager = "".join([
+        f"""<a class="mpager-prev" href="/manual/{previous['slug']}"><span>{icon("arrow-left")}Previous</span>{previous['title']}</a>""" if previous else "<span></span>",
+        f"""<a class="mpager-next" href="/manual/{following['slug']}"><span>Next{icon("arrow-right")}</span>{following['title']}</a>""" if following else "<span></span>",
+    ])
+    body = f"""<main class="mpage">
+  <div class="mcontainer mlayout">
+    {sidebar(topic['slug'])}
+    <article class="mdoc">
+      <p class="mdoc-eyebrow">{topic['group']}</p>
+      <h1>{topic['title']}</h1>
+      <p class="mdoc-lede">{topic['summary']}</p>
+      <div class="mdoc-body">
+{topic['body']}
+      </div>
+      <nav class="mpager" aria-label="More topics">{pager}</nav>
+    </article>
+  </div>
+</main>
+<script src="/manual/search.js"></script>"""
+    write_page(f"manual/{topic['slug']}.html", f"{topic['title']} · VideoLibrary Manual", topic["summary"],
+               body, f"site-src/manual/{topic['slug']}.html", current="manual/")
+
+search_index = [{"slug": t["slug"], "title": t["title"], "group": t["group"], "icon": t.get("icon", "book"),
+                 "summary": t["summary"], "text": plain(t["body"])} for t in topics]
+(root / "docs/manual/search.js").write_text(
+    "// Generated by scripts/build_pages.py from site-src/manual/.\n"
+    f"window.MANUAL_TOPICS = {json.dumps(search_index, ensure_ascii=False)};\n"
+    + (root / "scripts/manual-search.js").read_text())
+print("docs/manual/search.js")

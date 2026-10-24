@@ -13,6 +13,9 @@ on:
       - "LICENSE"
       - "deploy-site.sh"
       - "CHANGELOG.md"
+      - "site-src/**"
+      - "scripts/build_pages.py"
+      - "scripts/manual-search.js"
   workflow_dispatch:
 
 permissions:

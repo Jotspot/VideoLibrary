@@ -1,0 +1,27 @@
+<!--
+  A page of the user manual. scripts/build_pages.py builds docs/manual/downloading.html
+  from it and lists it on the manual's index; edit this file, not the output.
+  title: Downloading
+  group: Libraries and Downloads
+  icon: download
+  order: 5
+  summary: Add Video's choices, the downloads panel, and how YouTube downloads work.
+-->
+<p>Click <b>+</b> in the toolbar to open <b>Add Video</b>. Paste a link from YouTube, Nebula or any of the 1,000+ sites yt-dlp supports.</p>
+<dl class="manual-defs">
+  <dt>Save to</dt><dd>Which library to add it to. <b>Downloads Folder</b> saves just the video to <code>~/Downloads</code> as "Title.mp4" without adding it to a library.</dd>
+  <dt>Resolution</dt><dd>The highest resolution to download: Best Available, 4K, 1440p, 1080p (default), 720p or 480p.</dd>
+  <dt>Quality</dt><dd>Balanced (default), Best (allows 60 fps) or Smaller File. The sheet shows what each means.</dd>
+  <dt>YouTube sign-in</dt><dd>Shows whether a sign-in is saved; <b>Change…</b> opens the sign-in settings.</dd>
+</dl>
+<p>For a playlist link, you can choose to download the whole playlist or just the one video.</p>
+<h2 id="the-downloads-panel">The downloads panel</h2>
+<p>The arrow button in the toolbar shows active downloads with their progress, size and speed. The title appears as soon as yt-dlp has found the video. You can cancel any download.</p>
+<p>If a download fails, the panel explains what went wrong in plain language with a button that fixes it: sign in, update the tools, choose a different quality or reconnect a library. <b>Details</b> shows yt-dlp's own output.</p>
+<h2 id="how-youtube-downloads-work">How YouTube downloads work</h2>
+<ul>
+  <li>Videos are saved as H.264 MP4 with AAC audio, so every Mac plays them.</li>
+  <li>YouTube downloads are tried <b>signed out first</b>, because YouTube sometimes gives signed-in accounts only a 360p version. Your sign-in is used only when a video needs it (age-restricted, members-only, or YouTube's "confirm you're not a bot" check).</li>
+  <li>If YouTube turns a signed-out download away with its bot check, the app goes straight to your sign-in for the next 30 minutes.</li>
+  <li>Captions are fetched with the video. If YouTube rate-limits them, the video still finishes and the captions are fetched again a few minutes later.</li>
+</ul>

@@ -1,0 +1,20 @@
+<!--
+  A page of the user manual. scripts/build_pages.py builds docs/manual/troubleshooting.html
+  from it and lists it on the manual's index; edit this file, not the output.
+  title: Troubleshooting
+  group: Help
+  icon: wrench
+  order: 15
+  summary: Fixes for the problems people run into most.
+-->
+<dl class="manual-defs">
+  <dt>Downloads suddenly fail</dt><dd>YouTube changes often. Settings › Tools › <b>Install &amp; Update All</b> fixes most problems.</dd>
+  <dt>"Sign in to confirm you're not a bot"</dt><dd>YouTube shows this to some networks, especially VPNs. <a href="/manual/signing-in">Sign in</a>, and the app uses your sign-in for these.</dd>
+  <dt>A video came out in 360p</dt><dd>See <a href="/manual/sabr">360p and SABR</a>. Use <b>Re-download in HD</b> on the video.</dd>
+  <dt>Suggestions are empty or the sign-in disappeared</dt><dd>After an update, macOS asks for Keychain access. If that prompt is denied or closed, the app can't read your saved sign-in until it asks again. Quit and reopen the app and choose <b>Always Allow</b>. Your sign-in is kept while it waits for access.</dd>
+  <dt>"Contacting YouTube" takes a while</dt><dd>Signed-in downloads solve YouTube's player challenges first, which can take 10 to 40 seconds on slow or VPN connections.</dd>
+  <dt>The app won't open the first time</dt><dd>Follow step 3 of the <a href="/thanks">install guide</a>.</dd>
+  <dt>Importing from Safari fails</dt><dd>Give VideoLibrary Full Disk Access in System Settings › Privacy &amp; Security, or import from another browser.</dd>
+  <dt>A library says Disconnected</dt><dd>Plug the drive back in. Its videos come back on their own.</dd>
+</dl>
+<p>Still stuck? Open Settings › Help › <b>Open Debug Log</b> and attach it to an <a href="https://github.com/Jotspot/VideoLibrary/issues">issue on GitHub</a> (see <a href="https://github.com/orgs/community/discussions/147722#discussioncomment-11641354">best practices</a>).</p>
