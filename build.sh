@@ -74,6 +74,7 @@ swiftc \
   Sources/VideoLibrary/Models/MusicModels.swift \
   Sources/VideoLibrary/Services/LibraryStore.swift \
   Sources/VideoLibrary/Services/VideoImporter.swift \
+  Sources/VideoLibrary/Services/SABRAddon.swift \
   Sources/VideoLibrary/Services/DebugLog.swift \
   Sources/VideoLibrary/Services/KeychainStore.swift \
   Sources/VideoLibrary/Services/SecureStore.swift \

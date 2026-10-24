@@ -801,6 +801,7 @@ final class LibraryStore {
                 let service = try YtDlpService(outputRoot: libraryURL)
                 var completedVideoCount = 0
                 var itemsMissingSubtitles: [VideoItem] = []
+                var outcome = DownloadOutcome()
 
                 // Download without the YouTube sign-in first: YouTube withholds
                 // HD stream URLs from some signed-in accounts (the "SABR-only"
@@ -811,8 +812,17 @@ final class LibraryStore {
                 // Nebula) need the sign-in from the start.
                 let host = URL(string: trimmedURL)?.host?.lowercased() ?? ""
                 let isYouTube = host.hasSuffix("youtube.com") || host == "youtu.be"
-                var useSignIn = !isYouTube && canUseSignIn
+                // If YouTube just turned a signed-out attempt away (its bot
+                // check, common on VPN/datacenter networks), go straight to
+                // the sign-in for a while instead of failing first every time.
+                let anonymousBlocked = isYouTube && (Self.signedOutBlockedUntil.map { $0 > Date() } ?? false)
+                var useSignIn = canUseSignIn && (!isYouTube || anonymousBlocked)
+                // Signed-in YouTube downloads start with Safari's client (or
+                // whichever client last got HD past SABR): the default
+                // clients are SABR-limited to 360p for some accounts.
+                var preferredClient = isYouTube && !allowsPlaylist ? Self.workingSABRClient() : nil
                 var anonymousAttempts = 0
+                var sabrLimited = false
                 while true {
                     if !useSignIn { anonymousAttempts += 1 }
                     do {
@@ -822,15 +832,28 @@ final class LibraryStore {
                             cookiesFromBrowser: cookiesFromBrowser, rememberCookies: rememberCookies,
                             useSignIn: useSignIn, forceOverwrites: replacingExisting,
                             allowsPlaylist: allowsPlaylist, resolution: resolution, quality: quality,
+                            playerClient: useSignIn ? preferredClient : nil,
+                            abortOnLowSABR: isYouTube && !allowsPlaylist,
                             completedVideoCount: &completedVideoCount,
-                            itemsMissingSubtitles: &itemsMissingSubtitles
+                            itemsMissingSubtitles: &itemsMissingSubtitles,
+                            outcome: &outcome
                         )
+                        break
+                    } catch is SABRLimitedError {
+                        // Stopped before downloading a 360p fallback file.
+                        sabrLimited = true
                         break
                     } catch {
                         guard !(error is CancellationError), completedVideoCount == 0 else { throw error }
                         let failure = DownloadFailure.from(error)
-                        if !useSignIn, failure.needsSignIn, canUseSignIn {
+                        if useSignIn, preferredClient != nil {
+                            // The remembered client stopped working; forget it.
+                            DebugLog.write("Remembered YouTube client \(preferredClient ?? "") failed; retrying with the default.", category: "sabr")
+                            await MainActor.run { Self.sabrClientMemory = nil }
+                            preferredClient = nil
+                        } else if !useSignIn, failure.needsSignIn, canUseSignIn {
                             DebugLog.write("YouTube requires sign-in for this video; retrying with it.", category: "yt-dlp")
+                            await MainActor.run { Self.signedOutBlockedUntil = Date().addingTimeInterval(30 * 60) }
                             useSignIn = true
                         } else if !useSignIn, !failure.needsSignIn, failure.canRetry, anonymousAttempts < 2 {
                             // 403s and rate limits are usually temporary.
@@ -842,15 +865,56 @@ final class LibraryStore {
                         await MainActor.run {
                             task.isRetryingWithSignIn = useSignIn
                             task.phase = .fetchingInfo
-                            task.downloadedBytes = 0
+                            task.resetProgress()
                         }
                     }
                 }
+                // SABR: YouTube only offered SABR streams, so the regular
+                // download would fall back to 360p. That's spotted as soon as
+                // yt-dlp picks a format (before anything downloads); then
+                // other clients are tried, then the optional SABR add-on, and
+                // only if all of those fail is the 360p version downloaded.
+                if sabrLimited || (isYouTube && !allowsPlaylist && outcome.sabrDetected && outcome.isLow(for: resolution)) {
+                    let recovered = try await self.recoverFromSABR(
+                        task: task, service: service, url: trimmedURL, libraryID: libraryID,
+                        saveToFolder: downloadsFolder,
+                        cookiesFromBrowser: cookiesFromBrowser, rememberCookies: rememberCookies,
+                        useSignIn: useSignIn, resolution: resolution, quality: quality,
+                        lowResult: sabrLimited ? nil : outcome,
+                        alreadyTried: useSignIn ? preferredClient : nil
+                    )
+                    if let recovered {
+                        outcome = recovered
+                        completedVideoCount = max(completedVideoCount, 1)
+                    } else if sabrLimited {
+                        // Nothing better: save the 360p version after all.
+                        await MainActor.run { task.stageNote = "Downloading the 360p version…" }
+                        var lowOutcome = DownloadOutcome()
+                        try await self.runDownload(
+                            task: task, service: service, url: trimmedURL, libraryID: libraryID,
+                            saveToFolder: downloadsFolder,
+                            cookiesFromBrowser: cookiesFromBrowser, rememberCookies: rememberCookies,
+                            useSignIn: useSignIn, forceOverwrites: replacingExisting,
+                            allowsPlaylist: false, resolution: resolution, quality: quality,
+                            completedVideoCount: &completedVideoCount,
+                            itemsMissingSubtitles: &itemsMissingSubtitles,
+                            outcome: &lowOutcome
+                        )
+                        outcome = lowOutcome
+                    }
+                }
                 guard completedVideoCount > 0 else { throw YtDlpError.invalidOutput }
+                if let savedFile = outcome.savedFile {
+                    await MainActor.run { NSWorkspace.shared.activateFileViewerSelecting([savedFile]) }
+                }
 
                 await MainActor.run {
+                    task.stageNote = nil
                     task.phase = .complete
-                    self.activeTasks.removeAll { $0.id == task.id }
+                    // A quality notice stays in the panel until dismissed.
+                    if task.qualityNotice == nil {
+                        self.activeTasks.removeAll { $0.id == task.id }
+                    }
                 }
 
                 // Captions are often rate-limited (HTTP 429) right after a video
@@ -895,8 +959,12 @@ final class LibraryStore {
         allowsPlaylist: Bool,
         resolution: DownloadResolution,
         quality: DownloadQuality,
+        playerClient: String? = nil,
+        useSABR: Bool = false,
+        abortOnLowSABR: Bool = false,
         completedVideoCount: inout Int,
-        itemsMissingSubtitles: inout [VideoItem]
+        itemsMissingSubtitles: inout [VideoItem],
+        outcome: inout DownloadOutcome
     ) async throws {
         var currentItem: VideoItem?
         var downloadedVideoPath: String?
@@ -917,6 +985,8 @@ final class LibraryStore {
                 throw YtDlpError.invalidOutput
             }
 
+            outcome.shortSide = infoPath.flatMap(Self.shortSide(ofInfoJSONAt:))
+
             if let saveToFolder {
                 // Just the video, named after its title, never overwriting.
                 let ext = (videoPath as NSString).pathExtension
@@ -935,11 +1005,9 @@ final class LibraryStore {
                     try FileManager.default.copyItem(at: source, to: destination)
                 }
                 completedVideoCount += 1
+                outcome.savedFile = destination
                 let finalizedCount = completedVideoCount
-                await MainActor.run {
-                    task.completedVideoCount = finalizedCount
-                    NSWorkspace.shared.activateFileViewerSelecting([destination])
-                }
+                await MainActor.run { task.completedVideoCount = finalizedCount }
                 currentItem = nil
                 downloadedVideoPath = nil
                 return
@@ -978,10 +1046,22 @@ final class LibraryStore {
             forceOverwrites: forceOverwrites,
             allowsPlaylist: allowsPlaylist,
             resolution: resolution,
-            quality: quality
+            quality: quality,
+            playerClient: playerClient,
+            useSABR: useSABR
         ) {
             switch event {
-            case .info(var fetchedItem, let totalBytes):
+            case .info(var fetchedItem, let totalBytes, let shortSide):
+                // SABR-limited and about to download the 360p fallback:
+                // stop now so the fallbacks can run without a wasted download.
+                if abortOnLowSABR, outcome.sabrDetected {
+                    var preview = DownloadOutcome()
+                    preview.shortSide = shortSide
+                    if preview.isLow(for: resolution) {
+                        DebugLog.write("SABR-limited: yt-dlp picked \(shortSide.map(String.init) ?? "?")p; stopping before the download.", category: "sabr")
+                        throw SABRLimitedError()
+                    }
+                }
                 try await finishCurrentItem(preferredVideoPath: downloadedVideoPath)
                 fetchedItem.status = .downloading
                 currentItem = fetchedItem
@@ -1006,9 +1086,152 @@ final class LibraryStore {
                 await MainActor.run {
                     task.phase = .postProcessing
                 }
+            case .sabrDetected:
+                outcome.sabrDetected = true
             }
         }
         try await finishCurrentItem(preferredVideoPath: downloadedVideoPath)
+    }
+
+    /// Thrown to stop a run that's about to download YouTube's 360p fallback
+    /// because only SABR streams were offered.
+    struct SABRLimitedError: Error {}
+
+    /// What one yt-dlp run produced, for the SABR fallback.
+    struct DownloadOutcome: Sendable {
+        var sabrDetected = false
+        /// Short side of the downloaded video (720 for 1280×720), if known.
+        var shortSide: Int?
+        /// The file saved in Downloads Folder mode.
+        var savedFile: URL?
+
+        /// Below 480p when at least 720p was asked for: the 360p fallback.
+        func isLow(for resolution: DownloadResolution) -> Bool {
+            guard let shortSide else { return false }
+            let wanted = resolution.maxHeight ?? 1080
+            return shortSide < min(wanted, 720) * 2 / 3
+        }
+    }
+
+    nonisolated static func shortSide(ofInfoJSONAt path: String) -> Int? {
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let width = json["width"] as? Int ?? 0
+        let height = json["height"] as? Int ?? 0
+        guard width > 0 || height > 0 else { return nil }
+        return min(width > 0 ? width : height, height > 0 ? height : width)
+    }
+
+    /// YouTube clients that take a sign-in and often still get regular
+    /// (non-SABR) HD streams: the TV app, and Safari's HLS streams.
+    /// web_safari first: in testing it got 1080p (its HLS streams aren't
+    /// SABR) while tv failed with "The page needs to be reloaded".
+    nonisolated private static let sabrFallbackClients = ["web_safari", "tv"]
+
+    /// Until when signed-out YouTube downloads are skipped (set when YouTube's
+    /// bot check turned one away).
+    static var signedOutBlockedUntil: Date?
+
+    /// The fallback client that last got HD past SABR, and until when to
+    /// use it first for signed-in YouTube downloads.
+    static var sabrClientMemory: (client: String, until: Date)?
+
+    static func workingSABRClient() -> String? {
+        guard let memory = sabrClientMemory, memory.until > Date() else { return defaultSignedInClient }
+        return memory.client
+    }
+
+    /// Used first for signed-in YouTube downloads when no other client is
+    /// remembered.
+    static let defaultSignedInClient = "web_safari"
+
+
+    /// Runs the fallbacks after a SABR-limited low-quality download and
+    /// returns the best outcome. In Downloads Folder mode, files from
+    /// attempts that weren't kept are removed again.
+    private nonisolated func recoverFromSABR(
+        task: DownloadTask,
+        service: YtDlpService,
+        url: String,
+        libraryID: UUID,
+        saveToFolder: URL?,
+        cookiesFromBrowser: BrowserCookieSource,
+        rememberCookies: Bool,
+        useSignIn: Bool,
+        resolution: DownloadResolution,
+        quality: DownloadQuality,
+        lowResult: DownloadOutcome?,
+        alreadyTried: String? = nil
+    ) async throws -> DownloadOutcome? {
+        var best = lowResult ?? DownloadOutcome()
+
+        func attempt(client: String?, sabr: Bool, note: String) async throws -> Bool {
+            await MainActor.run {
+                task.stageNote = note
+                task.phase = .fetchingInfo
+                task.resetProgress()
+            }
+            var count = 0
+            var missing: [VideoItem] = []
+            var result = DownloadOutcome()
+            do {
+                try await self.runDownload(
+                    task: task, service: service, url: url, libraryID: libraryID,
+                    saveToFolder: saveToFolder,
+                    cookiesFromBrowser: cookiesFromBrowser, rememberCookies: rememberCookies,
+                    useSignIn: useSignIn, forceOverwrites: true,
+                    allowsPlaylist: false, resolution: resolution, quality: quality,
+                    playerClient: client, useSABR: sabr,
+                    // A client that's also SABR-limited stops before downloading.
+                    abortOnLowSABR: !sabr,
+                    completedVideoCount: &count, itemsMissingSubtitles: &missing,
+                    outcome: &result
+                )
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch is SABRLimitedError {
+                DebugLog.write("SABR fallback (\(client ?? "default")) is SABR-limited too.", category: "sabr")
+                return false
+            } catch {
+                DebugLog.write("SABR fallback (\(sabr ? "SABR add-on" : client ?? "default")) failed: \(error.localizedDescription)", category: "sabr")
+                return false
+            }
+            let improved = !result.isLow(for: resolution)
+                && (result.shortSide ?? 0) > (best.shortSide ?? 0)
+            DebugLog.write("SABR fallback (\(sabr ? "SABR add-on" : client ?? "default")) got \(result.shortSide.map(String.init) ?? "?")p; \(improved ? "keeping it" : "not better")", category: "sabr")
+            if improved {
+                if let old = best.savedFile, old != result.savedFile { try? FileManager.default.removeItem(at: old) }
+                best.shortSide = result.shortSide
+                best.savedFile = result.savedFile ?? best.savedFile
+                return true
+            }
+            if let extra = result.savedFile, extra != best.savedFile {
+                try? FileManager.default.removeItem(at: extra)
+            }
+            return false
+        }
+
+        for client in Self.sabrFallbackClients where client != alreadyTried {
+            if try await attempt(client: client, sabr: false, note: "Getting the HD version…") {
+                await MainActor.run {
+                    task.stageNote = nil
+                    Self.sabrClientMemory = (client, Date().addingTimeInterval(6 * 60 * 60))
+                }
+                return best
+            }
+        }
+
+        if SABRAddon.isInstalled {
+            if try await attempt(client: nil, sabr: true, note: "Downloading HD with the SABR add-on…") {
+                await MainActor.run { task.stageNote = nil }
+                return best
+            }
+            await MainActor.run { task.qualityNotice = .sabrAddonFailed }
+        } else {
+            await MainActor.run { task.qualityNotice = .needsSABRAddon }
+        }
+        await MainActor.run { task.stageNote = nil }
+        return lowResult
     }
 
     private func retrySubtitles(

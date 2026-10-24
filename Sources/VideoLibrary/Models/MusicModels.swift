@@ -51,6 +51,19 @@ struct MusicSource: Identifiable, Codable, Hashable, Sendable {
     var path: String
 }
 
+/// A subfolder (at any depth) of an added folder that holds songs. Each one
+/// is a playlist of the songs in it and below it, so a "Music" folder of
+/// album or playlist folders becomes one playlist per folder.
+struct FolderPlaylist: Identifiable, Hashable, Sendable {
+    let sourceID: UUID
+    /// Path inside the added folder, e.g. "Rock/Favourites".
+    let relativePath: String
+
+    var id: String { "\(sourceID.uuidString)/\(relativePath)" }
+    var name: String { (relativePath as NSString).lastPathComponent }
+    var depth: Int { relativePath.split(separator: "/").count }
+}
+
 /// A playlist the user made in the app.
 struct MusicPlaylist: Identifiable, Codable, Hashable, Sendable {
     var id: UUID

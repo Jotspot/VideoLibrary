@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip"><b>Download for Mac</b></a> ·
+  <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.dmg"><b>Download for Mac</b></a> ·
   <a href="https://video.mistr.uk/">Website</a> ·
   <a href="https://video.mistr.uk/changelog.html">Changelog</a> ·
   <a href="https://github.com/Jotspot/VideoLibrary/releases">All releases</a>
@@ -94,9 +94,8 @@ VideoLibrary is a front end and library for [yt-dlp](https://github.com/yt-dlp/y
 
 ## Install
 
-1. **[Download VideoLibrary.zip](https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip)** and unzip it. (New to installing apps from outside the App Store? The [step-by-step install guide](https://video.mistr.uk/thanks.html?preview) walks through every step.)
-2. Move **VideoLibrary.app** to your Applications folder.
-3. Open it. Because the app isn't notarized by Apple, macOS will block it the first time:
+1. **[Download VideoLibrary.dmg](https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.dmg)**, open it and drag **VideoLibrary** onto **Applications**. (A [zip](https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip) is also available.) New to installing apps from outside the App Store? The [step-by-step install guide](https://video.mistr.uk/thanks.html) walks through every step.
+2. Open it. Because the app isn't notarized by Apple, macOS will block it the first time:
    open **System Settings › Privacy & Security**, scroll down, and click **Open Anyway**.
    <details><summary>Or use Terminal</summary>
 
@@ -104,7 +103,7 @@ VideoLibrary is a front end and library for [yt-dlp](https://github.com/yt-dlp/y
    xattr -dr com.apple.quarantine /Applications/VideoLibrary.app
    ```
    </details>
-4. Install the download tools with [Homebrew](https://brew.sh) (or click **Install** in **Settings › Tools**):
+3. Install the download tools with [Homebrew](https://brew.sh) (or click **Install** in **Settings › Tools**):
 
    ```bash
    brew install yt-dlp ffmpeg deno
@@ -178,7 +177,7 @@ swiftc -target arm64-apple-macosx26.0 -sdk "$(xcrun --sdk macosx --show-sdk-path
 
 ### Releases
 
-Every push to `main` runs [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the app on a macOS 26 runner, ad-hoc signs it, and publishes `VideoLibrary.zip` to the release matching `CFBundleShortVersionString` in `Info.plist`. Pushing without changing the version refreshes that release's download; bump the version to cut a new release. Versions are `YY.MM.N`: the year, the month, and the release number within that month (26.10.1 is the first release of October 2026).
+Every push to `main` runs [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the app on a macOS 26 runner, ad-hoc signs it, and publishes `VideoLibrary.dmg` and `VideoLibrary.zip` to the release matching `CFBundleShortVersionString` in `Info.plist`. Pushing without changing the version refreshes that release's download; bump the version to cut a new release. Versions are `YY.MM.N`: the year, the month, and the release number within that month (26.10.1 is the first release of October 2026).
 
 ### Website
 

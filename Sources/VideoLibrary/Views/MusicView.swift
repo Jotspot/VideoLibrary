@@ -56,6 +56,14 @@ struct MusicView: View {
                     store: store, player: player
                 )
             }
+            .navigationDestination(for: FolderPlaylist.self) { folder in
+                let tracks = store.tracks(in: folder)
+                MusicCollectionView(
+                    title: folder.name, subtitle: "Folder",
+                    artworkURL: store.artworkURL(for: tracks.compactMap(\.artworkFile).first),
+                    tracks: tracks, store: store, player: player
+                )
+            }
             .navigationDestination(for: MusicPlaylist.self) { playlist in
                 // Re-read so edits show immediately.
                 let current = store.playlists.first { $0.id == playlist.id } ?? playlist
@@ -240,16 +248,32 @@ struct MusicView: View {
                 .buttonStyle(.plain)
                 .help(madeForYouExpanded ? "Collapse" : "Expand")
             }
-            SwiftUI.Section("Folders") {
+            SwiftUI.Section("Folder Playlists") {
                 ForEach(store.sources) { source in
+                    let subfolders = store.subfolders(of: source)
                     NavigationLink(value: source) {
-                        playlistRow(name: source.name, tracks: store.tracks(in: source), symbol: "folder.fill")
+                        HStack {
+                            playlistRow(name: source.name, tracks: store.tracks(in: source), symbol: "folder.fill")
+                            if !subfolders.isEmpty {
+                                Spacer()
+                                subfolderToggle(for: source, count: subfolders.count)
+                            }
+                        }
                     }
                     .contextMenu {
-                        Button("Play", systemImage: "play.fill") { player.play(store.tracks(in: source), shuffled: false) }
-                        Button("Shuffle", systemImage: "shuffle") { player.play(store.tracks(in: source), shuffled: true) }
-                        Button("Show in Finder", systemImage: "folder") {
-                            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: source.path)])
+                        folderMenu(tracks: store.tracks(in: source), path: source.path)
+                    }
+                    // Each subfolder with songs is its own playlist.
+                    if !collapsedSources.contains(source.id) {
+                        ForEach(subfolders) { folder in
+                            NavigationLink(value: folder) {
+                                playlistRow(name: folder.name, tracks: store.tracks(in: folder), symbol: "folder")
+                                    .padding(.leading, CGFloat(folder.depth) * 24)
+                            }
+                            .contextMenu {
+                                folderMenu(tracks: store.tracks(in: folder),
+                                           path: (source.path as NSString).appendingPathComponent(folder.relativePath))
+                            }
                         }
                     }
                 }
@@ -284,6 +308,39 @@ struct MusicView: View {
         }
     }
 
+    /// Folders whose subfolder playlists are hidden.
+    @State private var collapsedSources = Set<UUID>()
+
+    private func subfolderToggle(for source: MusicSource, count: Int) -> some View {
+        let collapsed = collapsedSources.contains(source.id)
+        return Button {
+            withAnimation(.snappy) {
+                if collapsed { collapsedSources.remove(source.id) } else { collapsedSources.insert(source.id) }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text("\(count) folder\(count == 1 ? "" : "s")")
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.bold))
+                    .rotationEffect(.degrees(collapsed ? 0 : 90))
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help(collapsed ? "Show subfolders" : "Hide subfolders")
+    }
+
+    @ViewBuilder
+    private func folderMenu(tracks: [Song], path: String) -> some View {
+        Button("Play", systemImage: "play.fill") { player.play(tracks, shuffled: false) }
+        Button("Shuffle", systemImage: "shuffle") { player.play(tracks, shuffled: true) }
+        Button("Show in Finder", systemImage: "folder") {
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+        }
+    }
+
     private func playlistRow(name: String, tracks: [Song], symbol: String) -> some View {
         HStack(spacing: 12) {
             ArtworkView(url: store.artworkURL(for: tracks.compactMap(\.artworkFile).first), cornerRadius: 6,
@@ -304,7 +361,7 @@ struct MusicView: View {
         ContentUnavailableView {
             Label("No Music Yet", systemImage: "music.note")
         } description: {
-            Text("Add a folder of songs (MP3, M4A, FLAC, WAV…). Their tags and cover art are read automatically, and each folder also becomes a playlist.")
+            Text("Add a folder of songs (MP3, M4A, FLAC, WAV…). Their tags and cover art are read automatically, and the folder and every folder inside it become playlists.")
         } actions: {
             Button("Add Music Folder…", systemImage: "folder.badge.plus") { store.chooseFolders() }
                 .buttonStyle(.borderedProminent)

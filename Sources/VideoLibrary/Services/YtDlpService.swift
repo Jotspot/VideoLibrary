@@ -129,18 +129,27 @@ struct DownloadProgress: Sendable {
 }
 
 enum DownloadEvent: Sendable {
-    case info(VideoItem, totalBytes: Int64)
+    /// shortSide: the chosen format's short side (360 for 640×360), if known.
+    case info(VideoItem, totalBytes: Int64, shortSide: Int?)
     case progress(DownloadProgress)
     case filePath(String)
     case postProcessing
+    /// yt-dlp warned that YouTube is serving SABR-only streams, so HD
+    /// formats may be missing (the result can fall back to 360p).
+    case sabrDetected
 }
 
 // Raw JSON shape emitted by yt-dlp's before-download print hook.
 private struct YtDlpFormatJSON: Decodable {
     let filesize: Int64?
     let filesize_approx: Int64?
-    /// Average bitrate in kbit/s; used when no size is listed (e.g. HLS).
+    /// Average bitrate in kbit/s; used when no size is listed.
     let tbr: Double?
+    let `protocol`: String?
+
+    /// HLS sizes are guessed from the advertised peak bitrate and come out
+    /// two or three times too big (540 MB for a 220 MB video).
+    var isHLS: Bool { `protocol`?.contains("m3u8") ?? false }
 
     func estimatedBytes(duration: Double?) -> Int64 {
         if let size = filesize ?? filesize_approx { return size }
@@ -163,10 +172,23 @@ private struct YtDlpInfoJSON: Decodable {
     let filesize: Int64?
     let filesize_approx: Int64?
     let tbr: Double?
+    let width: Int?
+    let height: Int?
+    let `protocol`: String?
     let requested_formats: [YtDlpFormatJSON]?
 
+    var shortSide: Int? {
+        let w = width ?? 0, h = height ?? 0
+        guard w > 0 || h > 0 else { return nil }
+        return min(w > 0 ? w : h, h > 0 ? h : w)
+    }
+
+    /// 0 (unknown) for HLS: its estimates are far off, and the download's
+    /// own fragment-based estimate takes over once it starts.
     var estimatedBytes: Int64 {
+        if `protocol`?.contains("m3u8") == true { return 0 }
         if let requested_formats {
+            if requested_formats.contains(where: \.isHLS) { return 0 }
             return requested_formats.reduce(0) { $0 + $1.estimatedBytes(duration: duration) }
         }
         if let size = filesize ?? filesize_approx { return size }
@@ -179,6 +201,9 @@ private struct StreamDownloadProgress {
     let downloaded: Int64
     let total: Int64
     let speed: Double
+    /// For fragmented (HLS/DASH) downloads; nil otherwise.
+    var fragmentIndex: Int? = nil
+    var fragmentCount: Int? = nil
 }
 
 private struct DownloadProgressAccumulator {
@@ -187,21 +212,49 @@ private struct DownloadProgressAccumulator {
     private var previousDownloaded: Int64 = 0
     private var previousStreamTotal: Int64 = 0
 
+    private var previousFragmentIndex: Int?
+
     mutating func update(_ stream: StreamDownloadProgress) -> DownloadProgress {
-        if stream.downloaded < previousDownloaded {
+        // A new stream (e.g. audio after video) starts from zero. With
+        // fragments the byte count can also dip within one stream (fragments
+        // download 4 at a time), so only a restart of the fragment count
+        // means a new stream; counting each dip made the size grow forever.
+        let isNewStream: Bool
+        if let index = stream.fragmentIndex, let previous = previousFragmentIndex {
+            isNewStream = index < previous
+        } else {
+            isNewStream = stream.downloaded < previousDownloaded
+        }
+        if isNewStream {
             completedBytes += max(previousStreamTotal, previousDownloaded)
             previousStreamTotal = 0
+            previousDownloaded = 0
         }
+        previousFragmentIndex = stream.fragmentIndex
 
-        previousDownloaded = stream.downloaded
-        previousStreamTotal = max(previousStreamTotal, stream.total)
-        let downloaded = completedBytes + stream.downloaded
+        previousDownloaded = max(previousDownloaded, stream.downloaded)
+        // Fragment-based totals are re-estimated as they go; take the latest.
+        previousStreamTotal = stream.fragmentIndex == nil ? max(previousStreamTotal, stream.total) : stream.total
+        let downloaded = completedBytes + previousDownloaded
         // 0 = size genuinely unknown (shown as an indeterminate bar rather
         // than a fake 100%).
         guard expectedTotal > 0 || stream.total > 0 else {
             return DownloadProgress(downloaded: downloaded, total: 0, speed: stream.speed)
         }
-        let total = max(expectedTotal, completedBytes + stream.total, downloaded)
+        // yt-dlp's up-front estimate for streamed formats can be far off
+        // (540 MB estimated for a 200 MB file), so the fragment-based
+        // estimate wins once it exists.
+        let streamTotal = completedBytes + previousStreamTotal
+        if let index = stream.fragmentIndex, let count = stream.fragmentCount, expectedTotal == 0 {
+            // The first few fragments (4 download at once) give wild
+            // guesses; show no size until the estimate has settled.
+            guard index >= min(10, max(1, count / 2)), previousStreamTotal > 0 else {
+                return DownloadProgress(downloaded: downloaded, total: 0, speed: stream.speed)
+            }
+        }
+        let total = stream.fragmentIndex != nil && previousStreamTotal > 0
+            ? max(streamTotal, downloaded)
+            : max(expectedTotal, streamTotal, downloaded)
         return DownloadProgress(downloaded: downloaded, total: total, speed: stream.speed)
     }
 }
@@ -210,6 +263,11 @@ actor YtDlpService {
     nonisolated private static let infoPrefix = "video-library-info:"
     nonisolated private static let progressPrefix = "video-library-progress:"
     nonisolated private static let filePrefix = "video-library-file:"
+    nonisolated private static let infoFields = [
+        "id", "title", "uploader", "uploader_id", "upload_date", "duration", "description", "tags",
+        "view_count", "like_count", "filesize", "filesize_approx", "tbr", "width", "height", "protocol",
+        "format_id", "requested_formats"
+    ].joined(separator: ",")
 
     // All stored properties are immutable — nonisolated lets them be read from any context.
     nonisolated let ytdlpPath: String
@@ -256,7 +314,7 @@ actor YtDlpService {
         )
     }
 
-    nonisolated private func parseInfo(line: String) throws -> (VideoItem, Int64)? {
+    nonisolated private func parseInfo(line: String) throws -> (VideoItem, Int64, Int?)? {
         guard line.hasPrefix(Self.infoPrefix) else { return nil }
         let jsonText = String(line.dropFirst(Self.infoPrefix.count))
         guard let data = jsonText.data(using: .utf8) else {
@@ -285,7 +343,7 @@ actor YtDlpService {
             likeCount: raw.like_count,
             status: .notDownloaded
         )
-        return (item, raw.estimatedBytes)
+        return (item, raw.estimatedBytes, raw.shortSide)
     }
 
     nonisolated func download(
@@ -297,7 +355,9 @@ actor YtDlpService {
         forceOverwrites: Bool = false,
         allowsPlaylist: Bool,
         resolution: DownloadResolution,
-        quality: DownloadQuality
+        quality: DownloadQuality,
+        playerClient: String? = nil,
+        useSABR: Bool = false
     ) -> AsyncThrowingStream<DownloadEvent, Error> {
         AsyncThrowingStream { continuation in
             let worker = Task {
@@ -315,10 +375,15 @@ actor YtDlpService {
                     // "video" fires right after format selection, before
                     // captions/thumbnails are fetched, so the title shows up
                     // immediately instead of after the subtitle step.
-                    "--print", "video:\(Self.infoPrefix)%()j",
+                    // Only the fields the app reads: the whole info dict (every
+                    // format, caption track and heatmap) was ~12 MB for some
+                    // videos, slow to print and parse.
+                    "--print", "video:\(Self.infoPrefix)%(.{\(Self.infoFields)})j",
                     "--print", "after_move:\(Self.filePrefix)%(filepath)j",
                     "--no-simulate",
-                    "--format", self.formatSelector(resolution: resolution, quality: quality),
+                    "--format", useSABR
+                        ? self.sabrFormatSelector(resolution: resolution, quality: quality)
+                        : self.formatSelector(resolution: resolution, quality: quality),
                     "--merge-output-format", "mp4",
                     "--concurrent-fragments", "4",
                     "--write-thumbnail",
@@ -346,6 +411,17 @@ actor YtDlpService {
                 args.append(allowsPlaylist ? "--yes-playlist" : "--no-playlist")
                 if forceOverwrites { args.append("--force-overwrites") }
                 args.append(contentsOf: self.javaScriptRuntimeArguments)
+                // A different YouTube client (e.g. "tv"), and/or SABR formats
+                // from the experimental build (`formats=duplicate` lists them
+                // next to the regular ones).
+                var youtubeArguments: [String] = []
+                if useSABR { youtubeArguments.append("formats=duplicate") }
+                if let playerClient { youtubeArguments.append("player_client=\(playerClient)") }
+                if !youtubeArguments.isEmpty {
+                    args.append(contentsOf: ["--extractor-args", "youtube:" + youtubeArguments.joined(separator: ";")])
+                }
+                let executable = useSABR ? SABRAddon.executableURL.path : self.ytdlpPath
+                var reportedSABR = false
 
                 // Decrypted cookies exist only for this run; re-encrypted and
                 // wiped however the download ends.
@@ -373,15 +449,20 @@ actor YtDlpService {
                         category: "yt-dlp"
                     )
 
-                    for try await line in self.runProcess(arguments: args, logContext: logContext) {
+                    for try await line in self.runProcess(arguments: args, logContext: logContext, executable: executable) {
                         try Task.checkCancellation()
-                        if let (info, totalBytes) = try self.parseInfo(line: line) {
+                        if !reportedSABR, !useSABR, line.contains("SABR") {
+                            reportedSABR = true
+                            DebugLog.write("Download \(logContext) SABR detected: \(line)", category: "yt-dlp")
+                            continuation.yield(.sabrDetected)
+                        }
+                        if let (info, totalBytes, shortSide) = try self.parseInfo(line: line) {
                             DebugLog.write(
                                 "Download \(logContext) info received. id=\(info.ytdlpID), title=\(info.title), estimatedBytes=\(totalBytes)",
                                 category: "yt-dlp"
                             )
                             progressAccumulator.expectedTotal = totalBytes
-                            continuation.yield(.info(info, totalBytes: totalBytes))
+                            continuation.yield(.info(info, totalBytes: totalBytes, shortSide: shortSide))
                         } else if let streamProgress = self.parseProgress(line: line) {
                             continuation.yield(.progress(progressAccumulator.update(streamProgress)))
                         } else if let filePath = self.parseFilePath(line: line) {
@@ -486,6 +567,24 @@ actor YtDlpService {
         return (references.video, references.thumbnail, references.subtitles, references.infoJSON)
     }
 
+    /// SABR streams only (from the experimental build), still H.264 + AAC
+    /// so the app's player can play the result.
+    nonisolated private func sabrFormatSelector(
+        resolution: DownloadResolution,
+        quality: DownloadQuality
+    ) -> String {
+        let maxHeight = effectiveMaxHeight(resolution: resolution, quality: quality)
+        let heightFilter = maxHeight.map { "[height<=\($0)]" } ?? ""
+        let fpsFilter = quality == .best ? "" : "[fps<=30]"
+        let video = "bestvideo[protocol=sabr][vcodec^=avc1]\(heightFilter)"
+        let audio = "bestaudio[protocol=sabr][ext=m4a]"
+        return orderedUnique([
+            "\(video)\(fpsFilter)+\(audio)",
+            "\(video)+\(audio)",
+            "\(video)+bestaudio[protocol=sabr]"
+        ]).joined(separator: "/")
+    }
+
     nonisolated private func formatSelector(
         resolution: DownloadResolution,
         quality: DownloadQuality
@@ -588,12 +687,18 @@ actor YtDlpService {
         var total = bytes(parts[1]) ?? bytes(parts[2]) ?? 0
         // Streamed (HLS/DASH fragment) downloads, e.g. Nebula: extrapolate
         // from how many fragments are done.
-        if total == 0, parts.count >= 6,
-           let index = Double(parts[4]), let count = Double(parts[5]), index > 0, count > 0, downloaded > 0 {
-            total = Int64(Double(downloaded) * count / index)
+        var fragmentIndex: Int?
+        var fragmentCount: Int?
+        if parts.count >= 6, let index = Double(parts[4]), let count = Double(parts[5]), index >= 0, count > 0 {
+            fragmentIndex = Int(index)
+            fragmentCount = Int(count)
+            if total == 0, downloaded > 0, index > 0 {
+                total = Int64(Double(downloaded) * count / index)
+            }
         }
         let speed = Double(parts[3]) ?? 0
-        return StreamDownloadProgress(downloaded: downloaded, total: total, speed: speed)
+        return StreamDownloadProgress(downloaded: downloaded, total: total, speed: speed,
+                                      fragmentIndex: fragmentIndex, fragmentCount: fragmentCount)
     }
 
     nonisolated private func redactedArguments(_ arguments: [String]) -> [String] {
@@ -611,7 +716,8 @@ actor YtDlpService {
 
     nonisolated private func runProcess(
         arguments: [String],
-        logContext: String
+        logContext: String,
+        executable: String? = nil
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             final class ProcessHandle: @unchecked Sendable {
@@ -641,7 +747,7 @@ actor YtDlpService {
 
             let processHandle = ProcessHandle()
             let process = processHandle.process
-            process.executableURL = URL(fileURLWithPath: self.ytdlpPath)
+            process.executableURL = URL(fileURLWithPath: executable ?? self.ytdlpPath)
             process.arguments = arguments
 
             let stdoutPipe = Pipe()

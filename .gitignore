@@ -16,3 +16,7 @@ Backups/
 !.dev.vars.example
 .env*
 !.env.example
+
+# Release packages (scripts/package.sh)
+*.dmg
+SHA256SUMS

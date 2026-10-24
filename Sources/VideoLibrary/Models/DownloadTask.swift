@@ -17,9 +17,23 @@ final class DownloadTask: Identifiable, @unchecked Sendable {
     var placeholderTitle: String?
     /// Set while retrying with the YouTube sign-in after an anonymous attempt.
     var isRetryingWithSignIn = false
+    /// Replaces the status line during a fallback step ("Getting the HD
+    /// version…").
+    var stageNote: String?
+    /// Set when the download finished but only in low quality because of
+    /// YouTube's SABR streaming; keeps the row in the panel with next steps.
+    var qualityNotice: QualityNotice?
     @ObservationIgnored var operation: Task<Void, Never>?
     /// Starts the same download again (set by LibraryStore.startDownload).
     @ObservationIgnored var retry: (() -> Void)?
+
+    /// Clears progress before another attempt so the previous attempt's
+    /// size and percentage don't linger.
+    func resetProgress() {
+        downloadedBytes = 0
+        totalBytes = 0
+        speed = 0
+    }
 
     var progress: Double {
         guard totalBytes > 0 else { return 0 }
@@ -32,6 +46,7 @@ final class DownloadTask: Identifiable, @unchecked Sendable {
 
     /// Status line, naming the site ("Contacting Nebula…").
     var statusText: String {
+        if let stageNote, canCancel { return stageNote }
         if case .fetchingInfo = phase { return "Contacting \(sourceName)…" }
         return phase.label
     }
@@ -66,6 +81,13 @@ final class DownloadTask: Identifiable, @unchecked Sendable {
         guard canCancel else { return }
         phase = .cancelling
         operation?.cancel()
+    }
+
+    enum QualityNotice: Sendable {
+        /// SABR detected and the other YouTube clients didn't get HD.
+        case needsSABRAddon
+        /// The SABR add-on was tried and didn't get HD either.
+        case sabrAddonFailed
     }
 
     enum Phase: Sendable {

@@ -2,6 +2,24 @@
 
 VideoLibrary versions are `YY.MM.N`: the year, the month, and the release number within that month.
 
+## 26.10.3 — 2026-10-24
+
+### New
+- **SABR fallback for YouTube.** Some accounts and networks only get YouTube's newer SABR streams, which left downloads stuck at 360p. VideoLibrary now spots this as soon as yt-dlp picks a format, before anything downloads, and tries other YouTube clients (Safari's, then the TV app's) that often still get HD. Signed-in YouTube downloads now start with Safari's client, so they usually get HD on the first try; if another client works better, it's remembered for a few hours.
+- **Optional SABR add-on.** If those don't get HD either, the downloads panel offers an experimental SABR add-on (a preview build of yt-dlp) and retries with it. You can also install it from Settings › Tools › Experimental, after several confirmations. It's checked against its published checksum, kept in Application Support, and never replaces your Homebrew yt-dlp.
+- **Disk image download.** VideoLibrary now comes as **VideoLibrary.dmg**, with a window that shows where to drag the app and how to open it the first time. The zip is still available.
+- **User manual.** A full manual is on the website, linked from Settings › Help and the Help menu (⌘?), along with What's New and Report a Problem.
+
+### Improved
+- **Faster "Contacting YouTube".** The app now asks yt-dlp only for the details it uses (about 4 KB instead of up to 12 MB per video), and after YouTube's bot check turns away a signed-out download it uses your sign-in straight away for the next 30 minutes.
+- **Accurate download sizes for streamed videos.** The size no longer keeps growing during HLS downloads (it could show over 1 GB for a 200 MB video), and yt-dlp's up-front guess for these streams (often two or three times too big) isn't shown; the size appears once the download's own estimate has settled.
+- **Clean progress between attempts.** When a download retries or switches to another YouTube client, the progress bar, size and speed start fresh instead of showing the last attempt's numbers.
+- Settings › Tools: **Update All** is now above the Experimental section.
+
+### Fixed
+- **Saved sign-ins could be lost after an update.** If macOS's Keychain prompt was denied or closed after updating, the app replaced its encryption key, making saved sign-ins unreadable. It now waits and asks again instead.
+- **Folders inside an added music folder now become playlists too.** Adding a folder of album or playlist folders used to give one big playlist; now each folder with songs is its own playlist under **Folder Playlists**, and you can collapse them.
+
 ## 26.10.2 — 2026-10-23
 
 ### New

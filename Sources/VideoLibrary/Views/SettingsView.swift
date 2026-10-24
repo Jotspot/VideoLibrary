@@ -600,7 +600,7 @@ private struct MusicSettingsView: View {
                 } header: {
                     Text("Show Music In")
                 } footer: {
-                    Text("In a library's Music tab, use the + button to add a folder of songs. Each folder also becomes a playlist. The music index is kept with that library, in .VideoLibrary/music.json; your song files are never moved or changed.")
+                    Text("In a library's Music tab, use the + button to add a folder of songs. The folder and every folder inside it become playlists. The music index is kept with that library, in .VideoLibrary/music.json; your song files are never moved or changed.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -659,6 +659,9 @@ private struct MusicSettingsView: View {
 private struct ToolsSettingsView: View {
     @State private var tools = ToolsService.shared
     @State private var showLog = false
+    @State private var sabr = SABRAddon.shared
+    /// Which "are you sure" alert is showing (0 = none).
+    @State private var sabrConfirmation = 0
 
     var body: some View {
         Form {
@@ -743,9 +746,101 @@ private struct ToolsSettingsView: View {
                     }
                 }
             }
+
+            sabrSection
         }
         .formStyle(.grouped)
-        .task { await tools.refresh() }
+        .task {
+            await tools.refresh()
+            await sabr.refresh()
+        }
+    }
+
+    /// The SABR add-on. Downloads offer it on their own when YouTube only
+    /// serves SABR streams; installing it from here asks several times first.
+    @ViewBuilder
+    private var sabrSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                Image(systemName: "flask.fill")
+                    .foregroundStyle(.purple)
+                    .font(.title3)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("SABR Add-on").font(.headline)
+                    Text("yt-dlp's preview build, used only when YouTube serves SABR-only streams")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(sabr.installed ? (sabr.version ?? "Installed") : "Not installed")
+                    .font(.callout.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                if sabr.installed {
+                    Button(sabr.isInstalling ? "Updating…" : "Update Add-on", systemImage: "arrow.triangle.2.circlepath") {
+                        Task { await sabr.install() }
+                    }
+                    .disabled(sabr.isInstalling)
+                    Button("Remove", role: .destructive) { sabr.remove() }
+                        .disabled(sabr.isInstalling)
+                } else {
+                    Button(sabr.isInstalling ? "Installing…" : "Install SABR Add-on…", systemImage: "exclamationmark.triangle") {
+                        sabrConfirmation = 1
+                    }
+                    .disabled(sabr.isInstalling)
+                }
+                Spacer()
+                if sabr.isInstalling { ProgressView().controlSize(.small) }
+            }
+            if let error = sabr.lastError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+            }
+        } header: {
+            Text("Experimental")
+        } footer: {
+            Text("Most people never need this. If YouTube only offers your account SABR streams, a download will offer the add-on by itself. It's a preview of yt-dlp with SABR support (yt-dlp pull request #13515), checked against its published checksum, kept in Application Support, and it never replaces your Homebrew yt-dlp.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .alert("Install experimental software?", isPresented: confirmationBinding(1)) {
+            Button("Continue") { advanceSABRConfirmation() }
+            Button("Cancel", role: .cancel) { sabrConfirmation = 0 }
+        } message: {
+            Text("The SABR add-on is a preview build of yt-dlp that hasn't been released yet. It may be unstable, and it may break when YouTube changes something.")
+        }
+        .alert("Are you sure?", isPresented: confirmationBinding(2)) {
+            Button("Continue") { advanceSABRConfirmation() }
+            Button("Cancel", role: .cancel) { sabrConfirmation = 0 }
+        } message: {
+            Text("You probably don't need it. VideoLibrary already tries other YouTube clients when SABR limits a download, and it offers the add-on by itself if those don't work.")
+        }
+        .alert("Download a second copy of yt-dlp?", isPresented: confirmationBinding(3)) {
+            Button("Continue") { advanceSABRConfirmation() }
+            Button("Cancel", role: .cancel) { sabrConfirmation = 0 }
+        } message: {
+            Text("This downloads about 37 MB from GitHub (github.com/bashonly/yt-dlp, a yt-dlp maintainer's preview) into Application Support. It isn't from Homebrew, so brew upgrade won't update it; use Update Add-on here instead.")
+        }
+        .alert("Really install the SABR add-on?", isPresented: confirmationBinding(4)) {
+            Button("Install", role: .destructive) {
+                sabrConfirmation = 0
+                Task { await sabr.install() }
+            }
+            Button("Cancel", role: .cancel) { sabrConfirmation = 0 }
+        } message: {
+            Text("Last check. It's only used for YouTube videos that are limited to SABR streams, and you can remove it here at any time.")
+        }
+    }
+
+    private func confirmationBinding(_ step: Int) -> Binding<Bool> {
+        Binding(get: { sabrConfirmation == step }, set: { if !$0, sabrConfirmation == step { sabrConfirmation = 0 } })
+    }
+
+    /// Shows the next alert after the current one has closed.
+    private func advanceSABRConfirmation() {
+        let next = sabrConfirmation + 1
+        sabrConfirmation = 0
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { sabrConfirmation = next }
     }
 }
 
@@ -826,6 +921,22 @@ private struct PrivacySettingsView: View {
 private struct HelpSettingsView: View {
     var body: some View {
         Form {
+            Section {
+                HStack {
+                    Button("Open User Manual", systemImage: "book") { NSWorkspace.shared.open(AppLinks.manual) }
+                        .buttonStyle(.borderedProminent)
+                    Button("What's New") { NSWorkspace.shared.open(AppLinks.changelog) }
+                    Spacer()
+                    Button("Report a Problem…") { NSWorkspace.shared.open(AppLinks.issues) }
+                }
+            } header: {
+                Text("Manual")
+            } footer: {
+                Text("The manual covers libraries, downloading, signing in, the player, captions, music, Wi-Fi sharing and troubleshooting. It opens in your browser (Help › VideoLibrary Manual, ⌘?).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Player Shortcuts") {
                 shortcut("Play / Pause", "Space or K")
                 shortcut("Back / forward 5 seconds", "← / →")
@@ -835,6 +946,7 @@ private struct HelpSettingsView: View {
                 shortcut("Mute", "M")
                 shortcut("Captions", "C")
                 shortcut("Full screen", "F or double-click")
+                shortcut("Picture in Picture", "I")
                 shortcut("Exit full screen, then close", "Esc")
             }
 

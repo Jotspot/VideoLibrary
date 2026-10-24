@@ -6,6 +6,13 @@ enum KeychainStore {
     private static var cache: [String: Data?] = [:]
 
     static func data(for account: String) -> Data? {
+        try? readData(for: account)
+    }
+
+    /// nil only when there's genuinely no item. Any other failure (access
+    /// denied, the prompt cancelled or timed out after a rebuild) throws, so
+    /// callers never mistake "can't read it right now" for "doesn't exist".
+    static func readData(for account: String) throws -> Data? {
         if let cached = cache[account] {
             return cached
         }
@@ -20,10 +27,8 @@ enum KeychainStore {
 
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess else {
-            cache[account] = nil
-            return nil
-        }
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess else { throw KeychainError(status: status) }
         let data = item as? Data
         cache[account] = data
         return data

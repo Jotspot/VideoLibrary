@@ -233,3 +233,45 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
   .guide-head h1 { font-size: 40px; }
   .choice { padding: var(--s4); }
 }
+
+/* Install guide: download mode (thanks.html?download) vs. reading the guide */
+.guide:not(.is-downloading) [data-when="download"],
+.guide.is-downloading [data-when="guide"] { display: none !important; }
+.guide .hero-actions { margin-top: var(--s6); }
+
+/* User manual */
+.manual { padding: var(--s24) 0 var(--s32); }
+.manual a:not(.btn) { color: var(--text); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.manual-layout { display: grid; grid-template-columns: 3fr 9fr; gap: var(--s16); align-items: start; border-top: 1px solid var(--border); padding-top: var(--s12); }
+.manual-toc { position: sticky; top: calc(64px + var(--s8)); display: grid; gap: var(--s1); font-size: var(--t-sm); }
+.manual-toc a { color: var(--text-2) !important; text-decoration: none !important; padding: var(--s1) 0; }
+.manual-toc a:hover { color: var(--text) !important; }
+.manual-body { min-width: 0; max-width: 72ch; }
+.manual-body section { scroll-margin-top: calc(64px + var(--s6)); }
+.manual-body section + section { margin-top: var(--s16); padding-top: var(--s12); border-top: 1px solid var(--border); }
+.manual-body h2 { font-size: var(--t-3xl); letter-spacing: -0.025em; }
+.manual-body h3 { font-size: var(--t-lg); margin-top: var(--s8); }
+.manual-body p, .manual-body li, .manual-body dd { color: var(--text-2); }
+.manual-body p { margin-top: var(--s4); }
+.manual-body b { color: var(--text); font-weight: 500; }
+.manual-body ul, .manual-body ol { margin: var(--s4) 0 0; padding-left: var(--s5); }
+.manual-body li + li { margin-top: var(--s2); }
+.manual-body li::marker { color: var(--text-3); }
+.manual-body code { font-size: .88em; padding: 1px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); word-break: break-word; }
+.manual-defs { margin: var(--s4) 0 0; border-top: 1px solid var(--border); }
+.manual-defs dt { margin: 0; padding-top: var(--s4); color: var(--text); font-weight: 500; }
+.manual-defs dd { margin: var(--s1) 0 0; padding-bottom: var(--s4); border-bottom: 1px solid var(--border); }
+.manual-table { width: 100%; margin-top: var(--s4); border-collapse: collapse; font-size: var(--t-sm); }
+.manual-table td { padding: var(--s3) 0; border-bottom: 1px solid var(--border); color: var(--text-2); vertical-align: top; }
+.manual-table td:last-child { text-align: right; padding-left: var(--s4); }
+.manual-table kbd { margin-left: 0; }
+@media (max-width: 1024px) {
+  .manual-layout { grid-template-columns: minmax(0, 1fr); gap: var(--s8); }
+  .manual-toc { position: static; grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .manual { padding-top: var(--s16); }
+  .manual-table td:last-child { text-align: left; }
+  .manual-table tr { display: grid; }
+  .manual-table td:first-child { border-bottom: 0; padding-bottom: 0; }
+}

@@ -27,11 +27,16 @@ enum SecureStore {
         lock.lock()
         defer { lock.unlock() }
         if let cachedKey { return cachedKey }
-        if let data = KeychainStore.data(for: keyAccount), data.count == 32 {
+        // A read failure (e.g. the Keychain prompt after a rebuild was
+        // denied or timed out) throws instead of making a new key: replacing
+        // the key would make every saved sign-in unreadable for good.
+        if let data = try KeychainStore.readData(for: keyAccount) {
+            guard data.count == 32 else { throw CocoaError(.coderInvalidValue) }
             let key = SymmetricKey(data: data)
             cachedKey = key
             return key
         }
+        DebugLog.write("No encryption key in the Keychain yet; creating one.", category: "security")
         let key = SymmetricKey(size: .bits256)
         try KeychainStore.setData(key.withUnsafeBytes { Data($0) }, for: keyAccount)
         cachedKey = key

@@ -57,3 +57,11 @@ struct VideoFileDrag: Transferable {
         .suggestedFileName { $0.url.lastPathComponent }
     }
 }
+
+/// Pages on the project website and GitHub.
+enum AppLinks {
+    static let manual = URL(string: "https://video.mistr.uk/manual")!
+    static let installGuide = URL(string: "https://video.mistr.uk/thanks")!
+    static let changelog = URL(string: "https://video.mistr.uk/changelog")!
+    static let issues = URL(string: "https://github.com/Jotspot/VideoLibrary/issues")!
+}

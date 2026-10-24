@@ -32,6 +32,15 @@ struct VideoLibraryApp: App {
         .defaultSize(width: 1280, height: 800)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            // Help menu: the online manual instead of the empty Help Book.
+            CommandGroup(replacing: .help) {
+                Button("VideoLibrary Manual") { NSWorkspace.shared.open(AppLinks.manual) }
+                    .keyboardShortcut("?", modifiers: .command)
+                Button("Install Guide") { NSWorkspace.shared.open(AppLinks.installGuide) }
+                Button("What's New") { NSWorkspace.shared.open(AppLinks.changelog) }
+                Divider()
+                Button("Report a Problem…") { NSWorkspace.shared.open(AppLinks.issues) }
+            }
             CommandGroup(after: .toolbar) {
                 Toggle("Open Videos in Full Screen", isOn: $playerOpensFullScreen)
             }

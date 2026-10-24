@@ -1,0 +1,306 @@
+<!--
+  Body of docs/manual.html. scripts/build_pages.py wraps it in the site's
+  header and footer. Edit this file, not docs/manual.html.
+  title: User Manual · VideoLibrary
+  description: How to use VideoLibrary for Mac: libraries, downloading, the player, captions, suggestions, music, Wi-Fi sharing, settings and troubleshooting.
+-->
+<main class="manual">
+  <div class="container">
+    <div class="section-head">
+      <h2>User Manual</h2>
+      <p>Everything VideoLibrary does and where to find it. For installing, see the <a href="thanks.html">install guide</a>. Version <span data-version>26.10.3</span>.</p>
+    </div>
+
+    <div class="manual-layout">
+      <nav class="manual-toc" aria-label="Manual contents">
+        <a href="#getting-started">Getting started</a>
+        <a href="#libraries">Libraries</a>
+        <a href="#downloading">Downloading</a>
+        <a href="#signing-in">Signing in</a>
+        <a href="#sabr">360p and SABR</a>
+        <a href="#watching">Watching</a>
+        <a href="#shortcuts">Keyboard shortcuts</a>
+        <a href="#captions">Captions</a>
+        <a href="#suggestions">Suggestions</a>
+        <a href="#files-out">Getting videos out</a>
+        <a href="#music">Music</a>
+        <a href="#sharing">Wi-Fi sharing</a>
+        <a href="#settings">Settings reference</a>
+        <a href="#privacy">Privacy and security</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+        <a href="#files">Where files live</a>
+      </nav>
+
+      <div class="manual-body">
+
+        <section id="getting-started">
+          <h2>Getting started</h2>
+          <p>VideoLibrary needs macOS 26 (Tahoe) or later on an Apple silicon Mac. It downloads with three free tools that you install once: <b>yt-dlp</b> (does the downloading), <b>FFmpeg</b> (joins video and audio) and <b>Deno</b> (solves YouTube's player challenges).</p>
+          <ol class="manual-steps">
+            <li>Install the app: follow the <a href="thanks.html">install guide</a>.</li>
+            <li>Open <b>Settings</b> (<kbd>⌘</kbd><kbd>,</kbd>) › <b>Tools</b> and click <b>Install &amp; Update All</b>. This uses <a href="https://brew.sh">Homebrew</a>; if you don't have it, the Tools tab links to it.</li>
+            <li>Click <b>+</b> in the toolbar, paste a link and click <b>Download</b>.</li>
+          </ol>
+          <p>Your first library is <code>~/Movies/VideoLibrary</code>. You can add more anywhere, including on external drives.</p>
+        </section>
+
+        <section id="libraries">
+          <h2>Libraries</h2>
+          <p>A library is a folder of videos. VideoLibrary keeps its index in a hidden <code>.VideoLibrary</code> folder inside it, so a library on an external drive works on any Mac you plug it into.</p>
+          <h3>Adding and switching</h3>
+          <ul>
+            <li>Click <b>Add Library Folder</b> in the sidebar (or Settings › General › Libraries) and choose a folder.</li>
+            <li>Click a library in the sidebar to switch to it. The header shows how many videos it has, the space they use and the free space on that drive.</li>
+            <li>A library on a drive that isn't plugged in shows <b>Disconnected</b>. It comes back on its own when you reconnect the drive.</li>
+          </ul>
+          <h3>Browsing</h3>
+          <ul>
+            <li>The <b>Uploaders</b> list in the sidebar filters the library to one channel.</li>
+            <li><b>Sort</b> orders videos by title, uploader, date added, upload date, length or size.</li>
+            <li>Each card shows the video's resolution (480p to 4K), length, upload date, file size and how much you've watched.</li>
+            <li>The search box searches the current library by title and uploader.</li>
+          </ul>
+          <h3>Right-click a video</h3>
+          <ul>
+            <li><b>Play</b> or <b>Play from Beginning</b>.</li>
+            <li><b>Re-download</b> (or <b>Re-download in HD</b> for low-quality files) replaces the file and keeps its place, date added and watch progress.</li>
+            <li><b>Share</b>, <b>Save to Downloads</b>: see <a href="#files-out">Getting videos out</a>.</li>
+            <li><b>Move to Library</b> moves the file and its captions into another library.</li>
+            <li><b>Delete</b> removes it from the library and deletes its files.</li>
+          </ul>
+          <h3>Importing your own videos</h3>
+          <p>Settings › General › Libraries › <b>Import Videos</b> next to a library adds files you didn't download, like screen recordings or clips. The file name becomes the title and an early frame becomes the thumbnail.</p>
+          <ul>
+            <li><b>Copy Videos into Library…</b> puts a copy in the library's <code>Imported</code> folder.</li>
+            <li><b>Link Videos Where They Are…</b> leaves the files where they are. Deleting a linked video from the library never deletes your file.</li>
+            <li>Only formats macOS can play are imported (MP4, MOV, M4V…). MKV and WebM files are skipped and listed.</li>
+          </ul>
+        </section>
+
+        <section id="downloading">
+          <h2>Downloading</h2>
+          <p>Click <b>+</b> in the toolbar to open <b>Add Video</b>. Paste a link from YouTube, Nebula or any of the 1,000+ sites yt-dlp supports.</p>
+          <dl class="manual-defs">
+            <dt>Save to</dt><dd>Which library to add it to. <b>Downloads Folder</b> saves just the video to <code>~/Downloads</code> as "Title.mp4" without adding it to a library.</dd>
+            <dt>Resolution</dt><dd>The highest resolution to download: Best Available, 4K, 1440p, 1080p (default), 720p or 480p.</dd>
+            <dt>Quality</dt><dd>Balanced (default), Best (allows 60 fps) or Smaller File. The sheet shows what each means.</dd>
+            <dt>YouTube sign-in</dt><dd>Shows whether a sign-in is saved; <b>Change…</b> opens the sign-in settings.</dd>
+          </dl>
+          <p>For a playlist link, you can choose to download the whole playlist or just the one video.</p>
+          <h3>The downloads panel</h3>
+          <p>The arrow button in the toolbar shows active downloads with their progress, size and speed. The title appears as soon as yt-dlp has found the video. You can cancel any download.</p>
+          <p>If a download fails, the panel explains what went wrong in plain language with a button that fixes it: sign in, update the tools, choose a different quality or reconnect a library. <b>Details</b> shows yt-dlp's own output.</p>
+          <h3>How YouTube downloads work</h3>
+          <ul>
+            <li>Videos are saved as H.264 MP4 with AAC audio, so every Mac plays them.</li>
+            <li>YouTube downloads are tried <b>signed out first</b>, because YouTube sometimes gives signed-in accounts only a 360p version. Your sign-in is used only when a video needs it (age-restricted, members-only, or YouTube's "confirm you're not a bot" check).</li>
+            <li>If YouTube turns a signed-out download away with its bot check, the app goes straight to your sign-in for the next 30 minutes.</li>
+            <li>Captions are fetched with the video. If YouTube rate-limits them, the video still finishes and the captions are fetched again a few minutes later.</li>
+          </ul>
+        </section>
+
+        <section id="signing-in">
+          <h2>Signing in</h2>
+          <p>A sign-in is needed for your Suggestions feed, age-restricted and members-only videos, Nebula, and when YouTube asks you to confirm you're not a bot. Set it up in Settings › <b>Downloads</b>.</p>
+          <h3>YouTube</h3>
+          <ul>
+            <li><b>Sign In to YouTube…</b> opens a private sign-in window. Nothing from it is kept except the YouTube sign-in itself.</li>
+            <li><b>Import from Browser</b> copies your YouTube sign-in from a browser you're already signed in to: Safari, Chrome, Arc, Dia, Brave, Edge, Firefox, Helium and others, including specific profiles. Safari needs Full Disk Access; the app shows a button that opens that setting.</li>
+            <li><b>Sign Out</b> forgets the saved YouTube sign-in.</li>
+          </ul>
+          <h3>Nebula</h3>
+          <p>The <b>Nebula</b> section has its own <b>Import from Browser</b> and a field for a Nebula token. YouTube and Nebula sign-ins are stored separately; importing one never replaces the other.</p>
+          <p>Every sign-in is stored encrypted. See <a href="#privacy">Privacy and security</a>.</p>
+        </section>
+
+        <section id="sabr">
+          <h2>360p and SABR</h2>
+          <p>YouTube is moving to a new way of streaming video called <b>SABR</b>. For some accounts and some networks (VPNs and datacenter connections in particular), YouTube offers HD only as SABR streams, and the standard download tools can't save those yet. Without help, those downloads come out in 360p.</p>
+          <p>VideoLibrary handles this in steps:</p>
+          <ol class="manual-steps">
+            <li>It notices SABR as soon as yt-dlp picks a format, <b>before anything downloads</b>.</li>
+            <li>It tries other YouTube clients that often still get regular HD streams: Safari's, then the TV app's. The downloads panel shows "Getting the HD version…". Signed-in downloads start with Safari's client anyway, so this step is usually skipped.</li>
+            <li>If the <b>SABR add-on</b> is installed, it downloads the video in HD with that.</li>
+            <li>If none of that works, it saves the 360p version and keeps the download in the panel with an <b>Install SABR Add-on &amp; Retry</b> button.</li>
+          </ol>
+          <h3>The SABR add-on</h3>
+          <p>The add-on is a preview build of yt-dlp with SABR support (<a href="https://github.com/yt-dlp/yt-dlp/pull/13515">yt-dlp pull request #13515</a>). It's experimental, so it's never installed up front:</p>
+          <ul>
+            <li>A download offers it when it's needed, as above.</li>
+            <li>You can also install it from Settings › <b>Tools</b> › <b>Experimental</b>. Because it's preview software, you'll be asked several times to confirm.</li>
+            <li>It's about 37 MB, checked against its published checksum when installed, and kept in Application Support. It never replaces your Homebrew yt-dlp, and it's only used for videos limited to SABR.</li>
+            <li>Settings › Tools can update or remove it. <code>brew upgrade</code> doesn't update it.</li>
+          </ul>
+          <p>Already have 360p videos? Library cards flag them, and a banner offers <b>Re-download in HD</b>.</p>
+        </section>
+
+        <section id="watching">
+          <h2>Watching</h2>
+          <p>Click a video to play it. It fills the window; move the pointer to show the controls, and they hide again after a moment. Press <kbd>Esc</kbd> or click <b>Library</b> to go back. Videos resume where you left off.</p>
+          <ul>
+            <li><b>Transport bar:</b> play/pause, 10-second skips, volume, playback speed (0.5× to 2×), captions on or off, and full screen.</li>
+            <li><b>Top bar:</b> the title, uploader, upload date and resolution, plus <b>Picture in Picture</b> and <b>Share</b>.</li>
+            <li><b>Full screen</b> fills the screen with the same controls floating over the video. Turn on Settings › General › <b>Open videos in full screen</b> to start every video that way.</li>
+            <li><b>Resize the window to fit each video</b> (Settings › General) removes black bars, then puts the window back to its old size when you leave.</li>
+            <li><b>Miniplayer:</b> leave an unfinished video and it keeps playing in a small player over the library (turn off with <b>Keep playing in a miniplayer when going back to the library</b>).</li>
+            <li><b>Frame stepping:</b> <kbd>,</kbd> and <kbd>.</kbd> move exactly one frame.</li>
+          </ul>
+        </section>
+
+        <section id="shortcuts">
+          <h2>Keyboard shortcuts</h2>
+          <table class="manual-table">
+            <tbody>
+              <tr><td>Play or pause</td><td><kbd>Space</kbd> <kbd>K</kbd></td></tr>
+              <tr><td>Back or forward 5 seconds</td><td><kbd>←</kbd> <kbd>→</kbd></td></tr>
+              <tr><td>Back or forward 10 seconds</td><td><kbd>J</kbd> <kbd>L</kbd></td></tr>
+              <tr><td>Previous or next frame</td><td><kbd>,</kbd> <kbd>.</kbd></td></tr>
+              <tr><td>Volume up or down</td><td><kbd>↑</kbd> <kbd>↓</kbd></td></tr>
+              <tr><td>Mute</td><td><kbd>M</kbd></td></tr>
+              <tr><td>Captions on or off</td><td><kbd>C</kbd></td></tr>
+              <tr><td>Full screen</td><td><kbd>F</kbd> or double-click</td></tr>
+              <tr><td>Picture in Picture</td><td><kbd>I</kbd></td></tr>
+              <tr><td>Leave full screen, then the player</td><td><kbd>Esc</kbd></td></tr>
+              <tr><td>Play or pause music (song list selected)</td><td><kbd>Space</kbd></td></tr>
+              <tr><td>Settings</td><td><kbd>⌘</kbd> <kbd>,</kbd></td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="captions">
+          <h2>Captions</h2>
+          <p>Captions download with each video when available, including YouTube's automatic ones. VideoLibrary shows automatic captions <b>word by word as they're spoken</b>, two steady lines at a time, instead of YouTube's repeating rolling lines.</p>
+          <p>Settings › <b>Captions</b> has a live preview and:</p>
+          <ul>
+            <li><b>Presets:</b> YouTube, Classic, Large &amp; Clear and Minimal set several options at once.</li>
+            <li><b>Auto-generated captions:</b> how many lines show at once.</li>
+            <li><b>Text:</b> size, font, weight and color.</li>
+            <li><b>Background:</b> one box, a box per line, an outline, or none, and its opacity.</li>
+            <li><b>Position:</b> bottom or top.</li>
+            <li><b>Show words as they're spoken</b>, <b>Animate captions</b> (off by default) and <b>Keep captions on screen through short pauses</b>, which stops the box from blinking between sentences.</li>
+          </ul>
+          <p><b>Reset to Defaults</b> puts everything back.</p>
+        </section>
+
+        <section id="suggestions">
+          <h2>Suggestions</h2>
+          <p><b>Suggestions</b> in the sidebar shows videos from YouTube you might want to save, minus ones already in your library. It reads your real YouTube feed through your sign-in, so you need to be <a href="#signing-in">signed in</a>.</p>
+          <ul>
+            <li><b>Subscriptions</b> shows new uploads from channels you follow; <b>Recommended</b> shows your YouTube Home.</li>
+            <li><b>Download</b> on a card saves it to the library chosen in Settings › Suggestions; <b>Open</b> opens it on YouTube. Cards show the approximate download size.</li>
+            <li><b>Hide Shorts</b> hides Shorts and, by default, any clip under a minute (change the length in Settings › Suggestions).</li>
+            <li>While Suggestions is showing, the toolbar search box searches all of YouTube.</li>
+          </ul>
+          <p>Settings › Suggestions can switch the source to the <b>Google Cloud API (advanced)</b>, which needs your own Google Cloud project, and can use it as a fallback if the feed fails.</p>
+        </section>
+
+        <section id="files-out">
+          <h2>Getting videos out</h2>
+          <ul>
+            <li><b>Drag</b> a video card to the desktop, a Finder folder or another app to get a copy. The library's own file never moves.</li>
+            <li><b>Share</b> (right-click, the player's top bar, or full screen) opens the macOS share menu: AirDrop, Messages, Mail, Notes and any share extensions you have.</li>
+            <li><b>Save to Downloads</b> (right-click) copies the video into <code>~/Downloads</code> and shows it in Finder. It never overwrites a file that's already there.</li>
+            <li>To download straight to Downloads without adding to a library, choose <b>Downloads Folder</b> in Add Video's "Save to" menu.</li>
+          </ul>
+        </section>
+
+        <section id="music">
+          <h2>Music</h2>
+          <p>Music is optional and off by default. Turn it on in Settings › <b>Music</b> with <b>Enable Music</b>, then choose:</p>
+          <ul>
+            <li><b>One for the whole app:</b> one music collection that shows in every library, kept in the app's own folder.</li>
+            <li><b>Separate for each library:</b> each library you tick has its own music, stored with that library (handy for music on an external drive).</li>
+          </ul>
+          <p>A <b>Music</b> item appears in the sidebar. Click <b>+</b> in the toolbar to add a folder of songs (MP3, M4A, FLAC, WAV and more). Tags and cover art are read automatically. Song files are never moved or changed.</p>
+          <h3>Browsing and playlists</h3>
+          <ul>
+            <li><b>Songs</b>, <b>Albums</b>, <b>Artists</b> and <b>Playlists</b> views. Sort the song table by any column.</li>
+            <li><b>Folder Playlists:</b> every added folder is a playlist, and so is every folder inside it that has songs, so a folder of album or playlist folders becomes one playlist each. Collapse a folder's subfolders with its chevron.</li>
+            <li><b>Made for You:</b> Liked Songs (the heart next to any song), Recently Played and Most Played.</li>
+            <li>Make your own playlists with <b>New Playlist…</b> or right-click songs › <b>Add to Playlist</b>.</li>
+          </ul>
+          <h3>Playing</h3>
+          <ul>
+            <li>Double-click a song, or hover its cover and click play. Right-click for <b>Play Next</b> and <b>Add to Queue</b>.</li>
+            <li>The floating player bar has shuffle, previous, play/pause, next, repeat, the progress bar, volume and <b>Up Next</b>, where you can reorder or clear the queue.</li>
+            <li>The bar stays while you browse videos. Right-click it outside Music to hide it until you open Music again, or turn on <b>Hide the music bar when leaving Music</b>.</li>
+            <li>Your keyboard's media keys and Control Center's Now Playing work. Starting a video pauses the music, and the other way round.</li>
+            <li>Your queue and position are restored, paused, when you reopen the app.</li>
+          </ul>
+        </section>
+
+        <section id="sharing">
+          <h2>Wi-Fi sharing</h2>
+          <p>Watch your library on a phone, tablet or another computer on the same Wi-Fi, in its browser, with no app to install.</p>
+          <ol class="manual-steps">
+            <li>Click the globe button in the toolbar and choose <b>Start Local Sharing</b>.</li>
+            <li>Scan the QR code with your phone, or use <b>Copy Link</b>.</li>
+            <li>Pick a library and channel, then tap a video to watch it, with captions.</li>
+          </ol>
+          <ul>
+            <li>The link contains a random access token, so only people with the link can open it. <b>Regenerate Token</b> makes a new one, and <b>Use Reusable Link</b> keeps the same link between sessions.</li>
+            <li>An address that tries 20 wrong tokens is locked out.</li>
+            <li>The page shows the Mac's battery level, so you know when it needs charging.</li>
+            <li>Click <b>Stop</b> to turn sharing off.</li>
+          </ul>
+        </section>
+
+        <section id="settings">
+          <h2>Settings reference</h2>
+          <p>Open Settings with <kbd>⌘</kbd><kbd>,</kbd> or the gear button in the toolbar.</p>
+          <dl class="manual-defs">
+            <dt>General</dt><dd>Player options (full screen, fit window to video, miniplayer) and your libraries, with <b>Import Videos</b> and <b>Add Library Folder…</b>.</dd>
+            <dt>Captions</dt><dd>Caption presets, style, position and motion, with a live preview. See <a href="#captions">Captions</a>.</dd>
+            <dt>Downloads</dt><dd>Default resolution and quality, the YouTube sign-in and the Nebula sign-in.</dd>
+            <dt>Suggestions</dt><dd>Feed source and type, which library downloads go to, Hide Shorts and the minimum length, and the Google Cloud API option.</dd>
+            <dt>Music</dt><dd>Turn music on, choose one collection or one per library, and hide the music bar when leaving Music.</dd>
+            <dt>Tools</dt><dd>Versions of yt-dlp, FFmpeg and Deno with <b>Install &amp; Update All</b> and <b>Check Again</b>, and the experimental <b>SABR Add-on</b>.</dd>
+            <dt>Privacy</dt><dd>How your data is stored, and <b>Run Security Check</b>, which looks for any plaintext secrets left by older versions and encrypts them.</dd>
+            <dt>Help</dt><dd>Player shortcuts, a link to this manual, and the debug log (<b>Open Debug Log</b>, <b>Show in Finder</b>, <b>Clear Log</b>).</dd>
+          </dl>
+        </section>
+
+        <section id="privacy">
+          <h2>Privacy and security</h2>
+          <ul>
+            <li>No accounts, no servers, no analytics. VideoLibrary only connects to the sites you download from (and GitHub, if you install the SABR add-on).</li>
+            <li>Sign-ins and tokens are encrypted with AES-GCM using a key kept in your Mac's Keychain, never stored in plain text.</li>
+            <li>yt-dlp gets a decrypted copy of your cookies in a private temporary folder for each download, which is removed when it finishes.</li>
+            <li>The debug log removes tokens and cookies before writing anything.</li>
+            <li>Because the app is signed by its developer rather than Apple, macOS asks for Keychain access once after each update. Choose <b>Always Allow</b>.</li>
+          </ul>
+        </section>
+
+        <section id="troubleshooting">
+          <h2>Troubleshooting</h2>
+          <dl class="manual-defs">
+            <dt>Downloads suddenly fail</dt><dd>YouTube changes often. Settings › Tools › <b>Install &amp; Update All</b> fixes most problems.</dd>
+            <dt>"Sign in to confirm you're not a bot"</dt><dd>YouTube shows this to some networks, especially VPNs. <a href="#signing-in">Sign in</a>, and the app uses your sign-in for these.</dd>
+            <dt>A video came out in 360p</dt><dd>See <a href="#sabr">360p and SABR</a>. Use <b>Re-download in HD</b> on the video.</dd>
+            <dt>Suggestions are empty or the sign-in disappeared</dt><dd>After an update, macOS asks for Keychain access. If that prompt is denied or closed, the app can't read your saved sign-in until it asks again. Quit and reopen the app and choose <b>Always Allow</b>. Your sign-in is kept while it waits for access.</dd>
+            <dt>"Contacting YouTube" takes a while</dt><dd>Signed-in downloads solve YouTube's player challenges first, which can take 10 to 40 seconds on slow or VPN connections.</dd>
+            <dt>The app won't open the first time</dt><dd>Follow step 3 of the <a href="thanks.html">install guide</a>.</dd>
+            <dt>Importing from Safari fails</dt><dd>Give VideoLibrary Full Disk Access in System Settings › Privacy &amp; Security, or import from another browser.</dd>
+            <dt>A library says Disconnected</dt><dd>Plug the drive back in. Its videos come back on their own.</dd>
+          </dl>
+          <p>Still stuck? Open Settings › Help › <b>Open Debug Log</b> and attach it to an <a href="https://github.com/Jotspot/VideoLibrary/issues">issue on GitHub</a> (see <a href="https://github.com/orgs/community/discussions/147722#discussioncomment-11641354">best practices</a>).</p>
+        </section>
+
+        <section id="files">
+          <h2>Where files live</h2>
+          <table class="manual-table">
+            <tbody>
+              <tr><td>Videos (default library)</td><td><code>~/Movies/VideoLibrary/&lt;uploader&gt;/</code></td></tr>
+              <tr><td>A library's index and music</td><td><code>&lt;library&gt;/.VideoLibrary/</code></td></tr>
+              <tr><td>Imported copies</td><td><code>&lt;library&gt;/Imported/</code></td></tr>
+              <tr><td>App settings and debug log</td><td><code>~/Library/Application Support/VideoLibrary/</code></td></tr>
+              <tr><td>Encrypted sign-ins</td><td><code>~/Library/Application Support/VideoLibrary/secure/</code></td></tr>
+              <tr><td>SABR add-on (if installed)</td><td><code>~/Library/Application Support/VideoLibrary/tools/</code></td></tr>
+              <tr><td>App-wide music collection</td><td><code>~/Library/Application Support/VideoLibrary/Music/</code></td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+  </div>
+</main>

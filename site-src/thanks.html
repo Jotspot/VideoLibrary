@@ -5,15 +5,25 @@
   description: How to install VideoLibrary on your Mac, step by step.
 -->
 <main class="guide">
+  <script>
+    // The site's Download buttons open thanks.html?download, which starts the
+    // download. Visiting /thanks directly only shows the guide.
+    if (new URLSearchParams(location.search).has('download')) document.currentScript.parentElement.classList.add('is-downloading');
+  </script>
   <div class="container">
     <div class="guide-head">
       <div>
-        <h1>Your download has started.</h1>
-        <span class="label">Thanks for downloading!</span>
+        <h1 data-when="download">Your download has started.</h1>
+        <span class="label" data-when="download">Thanks for downloading!</span>
+        <h1 data-when="guide">Install VideoLibrary</h1>
       </div>
       <div>
-        <p>VideoLibrary <span data-version>26.10.2</span> is saving to your Downloads folder. Installing takes about two minutes. Follow the steps below, even if you've never installed a Mac app from outside the App Store.</p>
-        <p class="guide-meta">Didn't start? <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip" id="download-again">Download it again</a>.</p>
+        <p data-when="download">VideoLibrary <span data-version>26.10.3</span> is saving to your Downloads folder. Installing takes about two minutes. Follow the steps below, even if you've never installed a Mac app from outside the App Store.</p>
+        <p class="guide-meta" data-when="download">Didn't start? <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.dmg" id="download-link">Download it again</a>.</p>
+        <p data-when="guide">Installing takes about two minutes. Follow the steps below, even if you've never installed a Mac app from outside the App Store.</p>
+        <div class="hero-actions" data-when="guide">
+          <a class="btn btn-primary" href="thanks.html?download"><svg class="i"><use href="#download"/></svg><span>Download <span data-version>26.10.3</span> for Mac</span></a>
+        </div>
       </div>
     </div>
 
@@ -21,17 +31,17 @@
       <li>
         <div class="step-number">1</div>
         <div class="step-body">
-          <h2>Unzip it</h2>
-          <p>Open your <b>Downloads</b> folder (in the Dock, or press <kbd>⌥</kbd><kbd>⌘</kbd><kbd>L</kbd> in Finder) and double-click <b>VideoLibrary.zip</b>. A <b>VideoLibrary</b> app appears next to it.</p>
-          <p class="note">Safari sometimes unzips downloads for you. If you already see the app, skip to step 2.</p>
+          <h2>Open the disk image</h2>
+          <p>Open your <b>Downloads</b> folder (in the Dock, or press <kbd>⌥</kbd><kbd>⌘</kbd><kbd>L</kbd> in Finder) and double-click <b>VideoLibrary.dmg</b>. A window opens with the <b>VideoLibrary</b> app and an <b>Applications</b> folder.</p>
         </div>
       </li>
 
       <li>
         <div class="step-number">2</div>
         <div class="step-body">
-          <h2>Move it to Applications</h2>
-          <p>Drag <b>VideoLibrary</b> onto <b>Applications</b> in the Finder sidebar. That keeps it with your other apps, and it shows up in Launchpad and Spotlight.</p>
+          <h2>Drag it to Applications</h2>
+          <p>In that window, drag <b>VideoLibrary</b> onto the <b>Applications</b> folder. That copies it in with your other apps, so it shows up in Launchpad and Spotlight. Then eject the disk image (the ⏏ next to "VideoLibrary" in the Finder sidebar) and you can delete the .dmg.</p>
+          <p class="note">Prefer a zip? <a href="https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip">VideoLibrary.zip</a> has the same app: unzip it and drag the app into Applications.</p>
         </div>
       </li>
 
@@ -107,10 +117,10 @@
 </main>
 
 <script>
-// Start the download as soon as the page opens (?preview skips it).
+// Start the download when the page was opened from a Download button.
 window.addEventListener('load', () => {
-  if (new URLSearchParams(location.search).has('preview')) return;
-  setTimeout(() => { window.location.href = document.getElementById('download-again').href; }, 400);
+  if (!document.querySelector('.guide.is-downloading')) return;
+  setTimeout(() => { window.location.href = document.getElementById('download-link').href; }, 400);
 });
 document.querySelectorAll('[data-copy]').forEach(button => {
   button.addEventListener('click', async () => {

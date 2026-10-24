@@ -64,6 +64,8 @@ struct DownloadRowView: View {
     var body: some View {
         if case .failed(let failure) = task.phase {
             DownloadFailureView(task: task, failure: failure)
+        } else if let notice = task.qualityNotice, case .complete = task.phase {
+            SABRNoticeView(task: task, notice: notice)
         } else {
             progressBody
         }
@@ -140,6 +142,96 @@ struct DownloadRowView: View {
 
     private func formatBytes(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+}
+
+/// A download that finished, but only in low quality because YouTube served
+/// SABR-only streams and the other YouTube clients didn't get HD. Offers the
+/// optional SABR add-on (installed only from here, on request).
+private struct SABRNoticeView: View {
+    @Environment(LibraryStore.self) private var store
+    let task: DownloadTask
+    let notice: DownloadTask.QualityNotice
+
+    @State private var addon = SABRAddon.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.yellow)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Downloaded in low quality")
+                        .font(.subheadline.weight(.semibold))
+                    Text(task.title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Button {
+                    store.activeTasks.removeAll { $0.id == task.id }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Dismiss")
+            }
+
+            Text(explanation)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let error = addon.lastError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 8) {
+                switch notice {
+                case .needsSABRAddon:
+                    Button(addon.isInstalling ? "Installing…" : "Install SABR Add-on & Retry",
+                           systemImage: "arrow.down.circle") {
+                        Task {
+                            if await addon.install() { retry() }
+                        }
+                    }
+                    .controlSize(.small)
+                    .disabled(addon.isInstalling)
+                    if addon.isInstalling { ProgressView().controlSize(.small) }
+                case .sabrAddonFailed:
+                    Button(addon.isInstalling ? "Updating…" : "Update Add-on & Retry",
+                           systemImage: "arrow.triangle.2.circlepath") {
+                        Task {
+                            if await addon.install() { retry() }
+                        }
+                    }
+                    .controlSize(.small)
+                    .disabled(addon.isInstalling)
+                }
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    private var explanation: String {
+        switch notice {
+        case .needsSABRAddon:
+            "YouTube only offered this video as SABR streams, which the standard download tools can't save yet, so it came out in 360p. The experimental SABR add-on (yt-dlp's preview build, about 37 MB) can download it in HD. It's kept separate from your other tools and only used when this happens."
+        case .sabrAddonFailed:
+            "YouTube only offered SABR streams, and the SABR add-on couldn't get HD either. The add-on is a preview and is updated often; updating it may fix this."
+        }
+    }
+
+    private func retry() {
+        store.activeTasks.removeAll { $0.id == task.id }
+        task.retry?()
     }
 }
 

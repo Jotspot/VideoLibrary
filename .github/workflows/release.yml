@@ -49,16 +49,14 @@ jobs:
         run: ./build.sh
 
       - name: Sign (ad-hoc) and package
-        run: |
-          codesign --force --deep --sign - VideoLibrary.app
-          codesign --verify --verbose VideoLibrary.app
-          ditto -c -k --sequesterRsrc --keepParent VideoLibrary.app VideoLibrary.zip
-          shasum -a 256 VideoLibrary.zip | tee VideoLibrary.zip.sha256
+        run: scripts/package.sh
 
       - uses: actions/upload-artifact@v7
         with:
           name: VideoLibrary-${{ steps.version.outputs.version }}-build${{ github.run_number }}
-          path: VideoLibrary.zip
+          path: |
+            VideoLibrary.dmg
+            VideoLibrary.zip
 
       - name: Write release notes
         env:
@@ -83,10 +81,10 @@ jobs:
             # Same version: point the tag at this commit and replace the download.
             git tag -f "$TAG"
             git push -f origin "refs/tags/$TAG"
-            gh release upload "$TAG" VideoLibrary.zip VideoLibrary.zip.sha256 --clobber
+            gh release upload "$TAG" VideoLibrary.dmg VideoLibrary.zip SHA256SUMS --clobber
             gh release edit "$TAG" --title "$TITLE" --latest --notes-file notes.md
           else
-            gh release create "$TAG" VideoLibrary.zip VideoLibrary.zip.sha256 \
+            gh release create "$TAG" VideoLibrary.dmg VideoLibrary.zip SHA256SUMS \
               --title "$TITLE" \
               --target "$GITHUB_SHA" \
               --latest \

@@ -76,7 +76,7 @@ final class MusicLibraryStore {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
         panel.prompt = "Add Music"
-        panel.message = "Choose folders with music. Each folder also becomes a playlist."
+        panel.message = "Choose folders with music. Each folder, and every folder inside it, becomes a playlist."
         guard panel.runModal() == .OK else { return }
         Task { await addFolders(panel.urls) }
     }
@@ -167,6 +167,30 @@ final class MusicLibraryStore {
 
     func tracks(in source: MusicSource) -> [Song] {
         tracks.filter { $0.sourceID == source.id }
+            .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+    }
+
+    /// Every subfolder of `source` that holds songs (directly or deeper),
+    /// in path order, so parents come right before their children.
+    func subfolders(of source: MusicSource) -> [FolderPlaylist] {
+        let root = source.path.hasSuffix("/") ? source.path : source.path + "/"
+        var folders = Set<String>()
+        for track in tracks where track.sourceID == source.id && track.path.hasPrefix(root) {
+            var directory = (String(track.path.dropFirst(root.count)) as NSString).deletingLastPathComponent
+            while !directory.isEmpty {
+                folders.insert(directory)
+                directory = (directory as NSString).deletingLastPathComponent
+            }
+        }
+        return folders
+            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+            .map { FolderPlaylist(sourceID: source.id, relativePath: $0) }
+    }
+
+    func tracks(in folder: FolderPlaylist) -> [Song] {
+        guard let source = sources.first(where: { $0.id == folder.sourceID }) else { return [] }
+        let prefix = (source.path.hasSuffix("/") ? source.path : source.path + "/") + folder.relativePath + "/"
+        return tracks.filter { $0.path.hasPrefix(prefix) }
             .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
     }
 
