@@ -339,3 +339,9 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
   .manual-table tr { display: grid; }
   .manual-table td:first-child { border-bottom: 0; padding-bottom: 0; }
 }
+
+/* 404 */
+.notfound { padding: var(--s32) 0; text-align: center; }
+.notfound h1 { font-size: var(--t-4xl); letter-spacing: -0.03em; }
+.notfound p { margin-top: var(--s4); color: var(--text-2); }
+.notfound a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }

@@ -16,6 +16,9 @@ import re
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
+site = "https://video.mistr.uk"
+# Every page's public URL, for the sitemap (the home page is hand-written).
+sitemap_urls = [f"{site}/"]
 index = (root / "docs/index.html").read_text()
 changelog = (root / "CHANGELOG.md").read_text()
 
@@ -100,8 +103,24 @@ def rooted(markup: str) -> str:
     return re.sub(r'(href|src)="(?!https?:|/|#|mailto:)([^"]*)"', r'\1="/\2"', markup)
 
 
+def public_url(name: str) -> str:
+    """Cloudflare Pages serves "a/b.html" at /a/b and "a/index.html" at /a/."""
+    path = name.removesuffix(".html")
+    path = path.removesuffix("index") if path.endswith("index") else path
+    return f"{site}/{path}"
+
+
 def write_page(name: str, title: str, description: str, body: str, generated_from: str,
-               current: str | None = None) -> None:
+               current: str | None = None, indexed: bool = True) -> None:
+    url = public_url(name)
+    if indexed:
+        sitemap_urls.append(url)
+    seo = (f"""<link rel="canonical" href="{url}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="{url}">
+<meta property="og:title" content="{html.escape(title)}">
+<meta property="og:description" content="{html.escape(description)}">
+<meta property="og:image" content="{site}/og.jpg">""" if indexed else '<meta name="robots" content="noindex">')
     page_header = header.replace(f'<a href="{current or name}">', f'<a href="{current or name}" aria-current="page">')
     page = f"""<!doctype html>
 <html lang="en">
@@ -110,6 +129,7 @@ def write_page(name: str, title: str, description: str, body: str, generated_fro
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{html.escape(title)}</title>
 <meta name="description" content="{html.escape(description)}">
+{seo}
 <meta name="theme-color" content="#0b0b0c">
 <link rel="icon" href="icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -287,3 +307,21 @@ search_index = [{"slug": t["slug"], "title": t["title"], "group": t["group"], "i
     f"window.MANUAL_TOPICS = {json.dumps(search_index, ensure_ascii=False)};\n"
     + (root / "scripts/manual-search.js").read_text())
 print("docs/manual/search.js")
+
+
+# Cloudflare Pages answers unknown paths with the home page and a 200 unless
+# there's a 404.html; a real 404 keeps search engines from indexing them.
+write_page("404.html", "Page not found · VideoLibrary", "", """<main class="notfound">
+  <div class="container">
+    <h1>Page not found</h1>
+    <p>That page doesn't exist. Try the <a href="/">home page</a> or the <a href="/manual/">manual</a>.</p>
+  </div>
+</main>""", "scripts/build_pages.py", indexed=False)
+(root / "docs/404.html").write_text(rooted((root / "docs/404.html").read_text()))
+
+(root / "docs/sitemap.xml").write_text(
+    '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    + "".join(f"  <url><loc>{url}</loc></url>\n" for url in sitemap_urls)
+    + "</urlset>\n")
+(root / "docs/robots.txt").write_text(f"User-agent: *\nAllow: /\n\nSitemap: {site}/sitemap.xml\n")
+print("docs/404.html, docs/sitemap.xml, docs/robots.txt")
