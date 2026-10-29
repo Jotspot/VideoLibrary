@@ -191,8 +191,15 @@ final class LibraryStore {
     var searchQuery: String = ""
     var selectedFilter: SidebarFilter = .all
     var selectedUploader: String?
-    var videoSortOption: VideoSortOption = .title
-    var videoSortAscending = true
+    /// Remembered between launches.
+    var videoSortOption: VideoSortOption = VideoSortOption(
+        rawValue: UserDefaults.standard.string(forKey: "librarySortOption") ?? ""
+    ) ?? .title {
+        didSet { UserDefaults.standard.set(videoSortOption.rawValue, forKey: "librarySortOption") }
+    }
+    var videoSortAscending = UserDefaults.standard.object(forKey: "librarySortAscending") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(videoSortAscending, forKey: "librarySortAscending") }
+    }
     var libraries: [LibraryLocation] = []
     var selectedLibraryID: UUID
 
@@ -1527,29 +1534,89 @@ final class LibraryStore {
     }
 
     func remove(_ item: VideoItem) {
-        items.removeAll { $0.id == item.id }
+        remove([item])
+    }
+
+    /// Asks before deleting several videos (or a whole uploader) at once.
+    /// Returns whether they were deleted.
+    @discardableResult
+    func confirmRemove(_ removed: [VideoItem], uploader: String? = nil) -> Bool {
+        guard !removed.isEmpty else { return false }
+        let count = removed.count == 1 ? "1 video" : "\(removed.count) videos"
+        let alert = NSAlert()
+        alert.messageText = uploader.map { "Delete all videos by \($0)?" } ?? "Delete \(count)?"
+        alert.informativeText = (uploader == nil ? "" : "This deletes \(count) and the uploader's folder. ")
+            + "The video files, thumbnails and captions are deleted from disk. This can't be undone."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Delete")
+        alert.buttons.first?.hasDestructiveAction = true
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return false }
+        remove(removed)
+        return true
+    }
+
+    /// Every downloaded video by one uploader.
+    func items(byUploader uploader: String) -> [VideoItem] {
+        items.filter { $0.uploader == uploader }
+    }
+
+    /// Deletes videos and their files, then any uploader folder they leave
+    /// empty (so deleting a whole channel leaves nothing behind in Finder).
+    func remove(_ removed: [VideoItem]) {
+        guard !removed.isEmpty else { return }
+        let ids = Set(removed.map(\.id))
+        items.removeAll { ids.contains($0.id) }
+        if let selectedUploader, !items.contains(where: { $0.uploader == selectedUploader }) {
+            self.selectedUploader = nil
+        }
         save()
 
         // Only delete files inside this library's folder, so an edited or
         // corrupted library.json can't point "Delete" at other files.
-        let root = selectedLibraryURL.resolvingSymlinksInPath().standardizedFileURL.path + "/"
+        let libraryRoot = selectedLibraryURL.resolvingSymlinksInPath().standardizedFileURL.path
+        let root = libraryRoot + "/"
         Task.detached {
             let fm = FileManager.default
-            // An imported video that was linked rather than copied is the
-            // user's own file: forget it, but don't delete it.
-            let keepsVideo = item.ytdlpID.hasPrefix("local-")
-                && item.videoFilePath?.contains("/Imported/") != true
-            let paths = [keepsVideo ? nil : item.videoFilePath, item.thumbnailPath, item.infoJSONPath].compactMap { $0 }
-                + Array(item.subtitlePaths.values)
-            for path in paths {
-                let resolved = URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
-                guard resolved.hasPrefix(root) else {
-                    DebugLog.write("Refused to delete file outside the library: \(path)", category: "security")
-                    continue
+            var folders = Set<String>()
+            for item in removed {
+                // An imported video that was linked rather than copied is the
+                // user's own file: forget it, but don't delete it.
+                let keepsVideo = item.ytdlpID.hasPrefix("local-")
+                    && item.videoFilePath?.contains("/Imported/") != true
+                let paths = [keepsVideo ? nil : item.videoFilePath, item.thumbnailPath, item.infoJSONPath].compactMap { $0 }
+                    + Array(item.subtitlePaths.values)
+                for path in paths {
+                    let resolved = URL(fileURLWithPath: path).resolvingSymlinksInPath().standardizedFileURL.path
+                    guard resolved.hasPrefix(root) else {
+                        DebugLog.write("Refused to delete file outside the library: \(path)", category: "security")
+                        continue
+                    }
+                    try? fm.removeItem(atPath: resolved)
+                    folders.insert((resolved as NSString).deletingLastPathComponent)
                 }
-                try? fm.removeItem(atPath: resolved)
+            }
+            // Deepest first, so a nested folder goes before its parent.
+            for folder in folders.sorted(by: { $0.count > $1.count }) {
+                Self.removeFolderIfEmpty(folder, libraryRoot: libraryRoot)
             }
         }
+    }
+
+    /// Removes a folder inside the library that holds nothing but Finder or
+    /// unfinished-download leftovers. Never the library folder itself or its
+    /// `.VideoLibrary` data.
+    nonisolated private static func removeFolderIfEmpty(_ folder: String, libraryRoot: String) {
+        guard folder.hasPrefix(libraryRoot + "/"),
+              !folder.contains("/.VideoLibrary") else { return }
+        let fm = FileManager.default
+        guard let contents = try? fm.contentsOfDirectory(atPath: folder) else { return }
+        let leftovers: Set<String> = ["part", "ytdl"]
+        let onlyJunk = contents.allSatisfy { name in
+            name == ".DS_Store" || leftovers.contains((name as NSString).pathExtension.lowercased())
+        }
+        guard onlyJunk else { return }
+        try? fm.removeItem(atPath: folder)
     }
 
     func move(_ item: VideoItem, to destinationLibraryID: UUID) {

@@ -59,6 +59,11 @@ struct SidebarView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            Button("Delete All Videos by \(uploader)…", role: .destructive) {
+                                store.confirmRemove(store.items(byUploader: uploader), uploader: uploader)
+                            }
+                        }
                     }
                 }
             }

@@ -13,6 +13,7 @@ enum AppPreference {
     static let captionsEnabled = "captionsEnabled"
     static let fitWindowToVideo = "playerFitsWindowToVideo"
     static let autoMiniplayer = "playerAutoMiniplayer"
+    static let libraryExitsFullScreen = "playerLibraryExitsFullScreen"
     static let resolution = "downloadResolution"
     static let quality = "downloadQuality"
     static let browserCookies = "browserCookies"
@@ -74,6 +75,7 @@ private struct GeneralSettingsView: View {
     @AppStorage(AppPreference.opensFullScreen) private var opensFullScreen = false
     @AppStorage(AppPreference.fitWindowToVideo) private var fitsWindowToVideo = true
     @AppStorage(AppPreference.autoMiniplayer) private var autoMiniplayer = true
+    @AppStorage(AppPreference.libraryExitsFullScreen) private var libraryExitsFullScreen = true
 
     var body: some View {
         Form {
@@ -82,7 +84,8 @@ private struct GeneralSettingsView: View {
                 Toggle("Resize the window to fit each video", isOn: $fitsWindowToVideo)
                     .disabled(opensFullScreen)
                 Toggle("Keep playing in a miniplayer when going back to the library", isOn: $autoMiniplayer)
-                Text("Videos fill the window, which resizes to the video's shape and back. Move the pointer over the video to show controls; press F or double-click for full screen. The miniplayer is skipped when a video has finished.")
+                Toggle("Going back to the library exits full screen", isOn: $libraryExitsFullScreen)
+                Text("Videos fill the window, which resizes to the video's shape and back. Move the pointer over the video to show controls; press F or double-click for full screen. The miniplayer is skipped when a video has finished. With full screen exit off, a window that was already full screen stays that way.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

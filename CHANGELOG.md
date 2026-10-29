@@ -2,6 +2,20 @@
 
 VideoLibrary versions are `YY.MM.N`: the year, the month, and the release number within that month.
 
+## 26.10.4 — 2026-10-29
+
+### New
+- **Delete several videos at once.** Click **Select** above the library (or ⌘-click a video) to pick videos; ⇧-click picks everything between two videos. Then delete them together with **Delete** (⌘⌫). **Select All** picks every video shown.
+- **Delete a whole channel.** Right-click an uploader in the sidebar, or any of their videos, and choose **Delete All Videos by…**. While you're viewing one uploader, a **Delete Channel…** button does the same.
+
+### Improved
+- **Uploader folders are cleaned up.** When deleting leaves an uploader's folder empty, the folder is deleted from Finder too.
+- **Your sort order is remembered.** The library keeps the sort you picked (and its direction) after you quit.
+
+### Fixed
+- **The Library button is easy to reach in full screen.** The full-screen player's top controls sat where the menu bar slides down, so it covered them when you moved the pointer up. They're now just below it.
+- **Library takes you out of full screen.** Going back to the library from a full-screen video now exits full screen, even if the app was full screen before you opened the video. Turn this off in Settings › General › **Going back to the library exits full screen**.
+
 ## 26.10.3 — 2026-10-24
 
 ### New

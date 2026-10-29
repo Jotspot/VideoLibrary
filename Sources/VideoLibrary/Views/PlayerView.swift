@@ -12,6 +12,7 @@ struct PlayerView: View {
     @Environment(LibraryStore.self) private var store
     @AppStorage("playerOpensFullScreen") private var opensFullScreen = false
     @AppStorage(AppPreference.fitWindowToVideo) private var fitsWindowToVideo = true
+    @AppStorage(AppPreference.libraryExitsFullScreen) private var libraryExitsFullScreen = true
     @AppStorage(CaptionPreference.behavior) private var captionBehavior = CaptionBehavior.pairs
     @AppStorage(CaptionPreference.size) private var captionSize = CaptionSize.medium
     @AppStorage(CaptionPreference.font) private var captionFont = CaptionFont.system
@@ -156,6 +157,7 @@ struct PlayerView: View {
     /// Back to the library: snap the window to its pre-video size first, so
     /// the library appears at the right size instead of resizing after.
     private func leave() {
+        chrome.exitsFullScreenOnLeave = libraryExitsFullScreen
         chrome.restoreWindowFrame(animated: false)
         close()
     }
@@ -257,7 +259,9 @@ struct PlayerView: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.top, 18)
+        // Below the menu bar: pointing at the top edge in full screen slides
+        // the menu bar down over the video, and it covered these buttons.
+        .padding(.top, NSStatusBar.system.thickness + 16)
         .padding(.bottom, 36)
         .background {
             // Blur that fades out downward instead of a hard-edged bar.
@@ -559,6 +563,9 @@ final class PlayerChromeModel {
 
     @ObservationIgnored var onKey: ((NSEvent) -> Bool)?
     @ObservationIgnored var isPlaying: () -> Bool = { true }
+    /// Set when the Library button leaves the player: exit full
+    /// screen even if the window was already full screen before the video.
+    @ObservationIgnored var exitsFullScreenOnLeave = false
 
     @ObservationIgnored private weak var window: NSWindow?
     /// The window's frame before it was fitted to the video, restored on exit.
@@ -606,7 +613,8 @@ final class PlayerChromeModel {
         setWindowButtonsVisible(true)
         restoreWindowFrame()
         // Put the window back the way the player found it.
-        if let window, window.styleMask.contains(.fullScreen), !wasFullScreenBeforePlayer {
+        if let window, window.styleMask.contains(.fullScreen),
+           !wasFullScreenBeforePlayer || exitsFullScreenOnLeave {
             DispatchQueue.main.async { window.toggleFullScreen(nil) }
         }
         window = nil

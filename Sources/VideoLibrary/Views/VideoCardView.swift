@@ -4,6 +4,8 @@ struct VideoCardView: View {
     let item: VideoItem
     let isSelected: Bool
     var resolution: String? = nil
+    /// Select mode: whether the card is picked. nil when not selecting.
+    var isChecked: Bool? = nil
 
     @State private var isHovered = false
 
@@ -17,13 +19,23 @@ struct VideoCardView: View {
                 .overlay {
                     // Glass is only drawn while hovered; an invisible glass
                     // view still costs a blur pass on every frame.
-                    if isHovered {
+                    if isHovered, isChecked == nil {
                         Image(systemName: "play.fill")
                             .font(.title)
                             .foregroundStyle(.white)
                             .padding(18)
                             .glassEffect(.regular, in: .circle)
                             .transition(.opacity.combined(with: .scale(scale: 0.85)))
+                    }
+                }
+                .overlay(alignment: .topLeading) {
+                    if let isChecked {
+                        Image(systemName: isChecked ? "checkmark.circle.fill" : "circle")
+                            .font(.title2)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, isChecked ? Color.accentColor : .black.opacity(0.35))
+                            .shadow(color: .black.opacity(0.4), radius: 2)
+                            .padding(8)
                     }
                 }
                 .overlay(alignment: .bottomTrailing) {
@@ -43,7 +55,7 @@ struct VideoCardView: View {
         .clipShape(.rect(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
+                .strokeBorder(isChecked ?? isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
         }
         // Shadow from a plain shape: far cheaper than shadowing the whole
         // card's contents (which renders it offscreen every frame).
