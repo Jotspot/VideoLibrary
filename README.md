@@ -94,6 +94,16 @@ VideoLibrary is a front end and library for [yt-dlp](https://github.com/yt-dlp/y
 
 ## Install
 
+### With Homebrew
+
+```bash
+brew install jotspot/tap/videolibrary
+```
+
+This installs the app and its download tools (yt-dlp, FFmpeg, Deno), and the app opens straight away without a Gatekeeper prompt. Update with `brew upgrade`. The cask lives in [Jotspot/homebrew-tap](https://github.com/Jotspot/homebrew-tap).
+
+### Or download it
+
 1. **[Download VideoLibrary.dmg](https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.dmg)**, open it and drag **VideoLibrary** onto **Applications**. (A [zip](https://github.com/Jotspot/VideoLibrary/releases/latest/download/VideoLibrary.zip) is also available.) New to installing apps from outside the App Store? The [step-by-step install guide](https://video.mistr.uk/thanks.html) walks through every step.
 2. Open it. Because the app isn't notarized by Apple, macOS will block it the first time:
    open **System Settings › Privacy & Security**, scroll down, and click **Open Anyway**.

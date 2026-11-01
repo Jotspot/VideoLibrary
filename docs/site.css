@@ -137,6 +137,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .steps h4 { font-size: var(--t-base); }
 .steps p { margin-top: var(--s2); color: var(--text-2); font-size: var(--t-sm); }
 .steps a { color: var(--text); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.steps pre { white-space: pre-wrap; }
 pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); font-size: var(--t-xs); color: var(--text); overflow-x: auto; }
 .inline-code { font-family: ui-monospace, Menlo, monospace; font-size: .9em; padding: 1px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
 
@@ -213,6 +214,7 @@ pre { margin: var(--s3) 0 0; padding: var(--s3) var(--s4); background: var(--sur
 .step-body > p { margin-top: var(--s3); color: var(--text-2); max-width: 64ch; }
 .step-body b { color: var(--text); font-weight: 500; }
 .step-body .note { font-size: var(--t-sm); color: var(--text-3); }
+.guide-head + .choice { margin: 0 0 var(--s12); }
 .choice { margin-top: var(--s6); padding: var(--s6); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); }
 .choice h3 { font-size: var(--t-base); }
 .choice > p { margin-top: var(--s2); color: var(--text-2); }

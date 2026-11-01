@@ -1,5 +1,9 @@
 ### Install
 
+With [Homebrew](https://brew.sh): `brew install jotspot/tap/videolibrary` installs the app and its download tools, and the app opens straight away. Update with `brew upgrade`.
+
+Or by hand:
+
 1. Download **VideoLibrary.dmg** below and open it (or use **VideoLibrary.zip** and unzip it).
 2. Drag **VideoLibrary** onto the **Applications** folder in the window that opens.
 3. The app isn't notarized, so the first time you open it macOS will block it. Open **System Settings › Privacy & Security**, scroll down and click **Open Anyway**. (Or run `xattr -dr com.apple.quarantine /Applications/VideoLibrary.app`.)
