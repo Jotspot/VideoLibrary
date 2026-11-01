@@ -10,3 +10,15 @@ fetch('https://api.github.com/repos/Jotspot/VideoLibrary/releases/latest')
     if (zip) document.querySelectorAll('[data-size]').forEach(el => { el.textContent = (zip.size / 1e6).toFixed(1) + ' MB'; });
   })
   .catch(() => {});
+
+// Compact copy buttons (data-copy-text): copy the command and show a tick briefly.
+document.querySelectorAll('[data-copy-text]').forEach(button => {
+  const icon = button.querySelector('.brew-icon use');
+  button.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(button.dataset.copyText); }
+    catch { getSelection().selectAllChildren(button.querySelector('code') ?? button); return; }
+    button.classList.add('is-copied');
+    icon?.setAttribute('href', '#check');
+    setTimeout(() => { button.classList.remove('is-copied'); icon?.setAttribute('href', '#copy'); }, 1500);
+  });
+});

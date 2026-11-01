@@ -71,6 +71,11 @@ code, kbd, pre { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, mo
 .hero h1 { font-size: var(--t-5xl); line-height: 1.05; letter-spacing: -0.035em; font-weight: 700; max-width: 14ch; }
 .hero-copy { color: var(--text-2); font-size: var(--t-lg); line-height: 1.6; max-width: 46ch; }
 .hero-actions { display: flex; gap: var(--s3); flex-wrap: wrap; margin-top: var(--s8); }
+.brew { display: inline-flex; align-items: center; gap: var(--s2); max-width: 100%; margin-top: var(--s4); height: 34px; padding: 0 var(--s3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); color: var(--text-3); font: inherit; cursor: pointer; transition: border-color .15s, color .15s; }
+.brew:hover { border-color: var(--border-strong); color: var(--text-2); }
+.brew code { min-width: 0; font-size: var(--t-xs); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brew .i { width: 14px; height: 14px; }
+.brew.is-copied .brew-icon { color: var(--text); }
 .hero-meta { margin-top: var(--s4); font-size: var(--t-xs); color: var(--text-3); }
 
 .shot-frame { margin-top: var(--s16); border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface); padding: var(--s2); box-shadow: var(--shadow); }
