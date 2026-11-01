@@ -17,6 +17,11 @@
 </p>
 
 <p align="center">
+  Or with <a href="https://brew.sh">Homebrew</a> (installs the download tools too, no security prompts):<br>
+  <code>brew install jotspot/tap/videolibrary</code>
+</p>
+
+<p align="center">
   <a href="https://github.com/Jotspot/VideoLibrary/actions/workflows/release.yml"><img src="https://github.com/Jotspot/VideoLibrary/actions/workflows/release.yml/badge.svg" alt="Build status"></a>
   <img src="https://img.shields.io/badge/macOS-26%2B-blue" alt="macOS 26+">
   <img src="https://img.shields.io/badge/Swift-6-orange" alt="Swift 6">

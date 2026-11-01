@@ -24,15 +24,12 @@
         <div class="hero-actions" data-when="guide">
           <a class="btn btn-primary" href="thanks.html?download"><svg class="i"><use href="#download"/></svg><span>Download <span data-version>26.10.4</span> for Mac</span></a>
         </div>
-      </div>
-    </div>
-
-    <div class="choice">
-      <h3>Have Homebrew? Skip all of this</h3>
-      <p>Paste this into Terminal. It installs VideoLibrary and its download tools, and the app opens straight away, with no security prompts. Update it later with <code>brew upgrade</code>.</p>
-      <div class="command">
-        <code id="brew-command">brew install jotspot/tap/videolibrary</code>
-        <button class="btn btn-secondary copy" type="button" data-copy="brew-command">Copy</button>
+        <div class="brew-row">
+          <span>Have Homebrew? Skip the steps below:</span>
+          <button class="brew" type="button" data-copy-text="brew install jotspot/tap/videolibrary" title="Copy the Homebrew install command" aria-label="Copy the Homebrew install command: brew install jotspot/tap/videolibrary">
+            <svg class="i"><use href="#terminal"/></svg><code>brew install jotspot/tap/videolibrary</code><svg class="i brew-icon"><use href="#copy"/></svg>
+          </button>
+        </div>
       </div>
     </div>
 
