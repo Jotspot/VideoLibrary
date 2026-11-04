@@ -851,7 +851,17 @@ final class LibraryStore {
                         sabrLimited = true
                         break
                     } catch {
-                        guard !(error is CancellationError), completedVideoCount == 0 else { throw error }
+                        if error is CancellationError { throw error }
+                        // yt-dlp exits 1 after any non-fatal error, e.g. a
+                        // caption fetch that stalled and "gave up after 10
+                        // retries" before the video downloaded fine. The
+                        // video is saved, so that's a success; captions are
+                        // retried below.
+                        if completedVideoCount > 0, case YtDlpError.nonZeroExit = error {
+                            DebugLog.write("yt-dlp exited non-zero after saving \(completedVideoCount) video(s); treating as success.", category: "yt-dlp")
+                            break
+                        }
+                        guard completedVideoCount == 0 else { throw error }
                         let failure = DownloadFailure.from(error)
                         if useSignIn, preferredClient != nil {
                             // The remembered client stopped working; forget it.

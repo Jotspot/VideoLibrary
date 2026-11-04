@@ -2,6 +2,12 @@
 
 VideoLibrary versions are `YY.MM.N`: the year, the month, and the release number within that month.
 
+## 26.11.1 — 2026-11-04
+
+### Fixed
+- **Downloads no longer show as failed when the video was saved.** If YouTube stalled a caption download, yt-dlp gave up on the captions but still saved the video, and the app reported the whole download as failed, so the video only showed up after a relaunch. These now finish normally, and captions are fetched again later.
+- **Clearer message for stalled downloads.** "Operation too slow" errors now explain that the connection stalled (usually YouTube slowing the network down for a while, or a VPN) instead of suggesting a tools update that won't help.
+
 ## 26.10.4 — 2026-10-29
 
 ### New

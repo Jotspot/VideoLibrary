@@ -173,6 +173,14 @@ struct DownloadFailure: Sendable, Equatable {
                 fix: .updateTools
             )
         }
+        // curl 28: the connection stalled ("Operation too slow. Less than 1
+        // bytes/sec…"). YouTube throttling or a flaky network, not old tools.
+        if has("operation too slow", "curl: (28)", "read timed out") {
+            return DownloadFailure(
+                title: "The download stalled",
+                explanation: "The connection stopped sending data, so yt-dlp gave up. This is usually YouTube slowing down this network for a while, or a VPN or Wi-Fi hiccup. Wait a few minutes and retry; turning a VPN off often helps."
+            )
+        }
         if has("unable to download webpage", "getaddrinfo", "nodename nor servname", "timed out", "network is unreachable",
                "connection reset", "temporary failure in name resolution", "urlopen error") {
             return DownloadFailure(
