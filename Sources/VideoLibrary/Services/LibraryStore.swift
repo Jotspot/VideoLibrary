@@ -613,6 +613,38 @@ final class LibraryStore {
         save()
     }
 
+    // MARK: - Deleting finished videos
+
+    /// Margins offered in Settings › General › Finished Videos.
+    static let autoDeleteThresholds = [100, 95, 90, 85, 80, 75]
+
+    /// Whether `progress` seconds into a `duration`-second video counts as
+    /// watched at `percent`. 100% allows a couple of seconds of slack, since
+    /// the saved position can stop just short of the very end.
+    nonisolated static func isFinished(progress: TimeInterval, duration: TimeInterval, percent: Int) -> Bool {
+        guard duration > 0, progress > 0 else { return false }
+        let needed = percent >= 100 ? duration - 2 : duration * Double(percent) / 100
+        return progress >= max(1, needed)
+    }
+
+    /// With "Delete videos after watching them" on, deletes every video in
+    /// the selected library watched past the chosen margin, except `keeping`
+    /// (videos still open in the player, miniplayer or PiP).
+    func deleteFinishedVideos(keeping keptIDs: Set<UUID> = []) {
+        let defaults = UserDefaults.standard
+        guard defaults.bool(forKey: AppPreference.autoDeleteFinished),
+              selectedLibraryIsAvailable else { return }
+        let percent = defaults.object(forKey: AppPreference.autoDeleteThreshold) as? Int ?? 100
+        let finished = items.filter { item in
+            !keptIDs.contains(item.id)
+                && item.status == .downloaded
+                && Self.isFinished(progress: item.watchProgress, duration: item.duration, percent: percent)
+        }
+        guard !finished.isEmpty else { return }
+        DebugLog.write("Auto-deleting \(finished.count) finished video(s) at \(percent)%", category: "library")
+        remove(finished)
+    }
+
     func selectLibrary(_ id: UUID) {
         guard id != selectedLibraryID,
               libraries.contains(where: { $0.id == id }) else { return }

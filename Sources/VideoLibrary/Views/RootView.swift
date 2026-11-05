@@ -123,6 +123,14 @@ struct RootView: View {
         .onChange(of: playingItem?.id) { _, id in
             if id != nil { musicPlayer.pause() }   // a video starting pauses the music
         }
+        .onChange(of: openVideoIDs) { _, ids in
+            if ids.isEmpty { deleteFinishedVideosSoon() }
+        }
+        .task(id: store.selectedLibraryID) {
+            // On launch and library switch: catch videos finished elsewhere
+            // (or before the setting was turned on).
+            store.deleteFinishedVideos(keeping: openVideoIDs)
+        }
         .onChange(of: player.isPictureInPictureActive) { _, active in
             // PiP window closed while browsing: stop that video.
             if !active, pipItem != nil {
@@ -164,6 +172,21 @@ struct RootView: View {
     private func syncSharing() {
         guard sharingServer.isRunning else { return }
         sharingServer.update(libraries: store.sharingSnapshots(), selectedLibraryID: store.selectedLibraryID)
+    }
+
+    /// Videos still on screen somewhere: the player, miniplayer or PiP.
+    private var openVideoIDs: Set<UUID> {
+        Set([playingItem?.id, miniItem?.id, pipItem?.id].compactMap { $0 })
+    }
+
+    /// Runs the "delete after watching" check once nothing is playing. The
+    /// player saves its final position as it disappears, so wait a moment.
+    private func deleteFinishedVideosSoon() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard openVideoIDs.isEmpty else { return }
+            store.deleteFinishedVideos()
+        }
     }
 
     /// Back to the library: Picture in Picture keeps going if it's on;

@@ -2,6 +2,11 @@
 
 VideoLibrary versions are `YY.MM.N`: the year, the month, and the release number within that month.
 
+## 26.11.2 — 2026-11-05
+
+### New
+- **Delete videos after watching them.** Turn it on in Settings › General › **Finished Videos** and pick when a video counts as watched: at the very end (100%), or earlier — 95%, 90%, 85%, 80% or 75% — so videos you stop during the credits or outro are cleaned up too. A video is deleted when you leave it, never while it's playing in the player, miniplayer or Picture in Picture. Videos you imported by linking them are only removed from the library; your own files are never deleted.
+
 ## 26.11.1 — 2026-11-04
 
 ### Fixed

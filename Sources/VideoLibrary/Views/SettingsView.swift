@@ -21,6 +21,8 @@ enum AppPreference {
     static let suggestionsLibraryID = "suggestionsDownloadLibraryID"
     static let hideShorts = "suggestionsHideShorts"
     static let minimumLength = "suggestionsMinimumLength"
+    static let autoDeleteFinished = "libraryAutoDeleteFinished"
+    static let autoDeleteThreshold = "libraryAutoDeleteThreshold"
 }
 
 extension OpenSettingsAction {
@@ -76,6 +78,8 @@ private struct GeneralSettingsView: View {
     @AppStorage(AppPreference.fitWindowToVideo) private var fitsWindowToVideo = true
     @AppStorage(AppPreference.autoMiniplayer) private var autoMiniplayer = true
     @AppStorage(AppPreference.libraryExitsFullScreen) private var libraryExitsFullScreen = true
+    @AppStorage(AppPreference.autoDeleteFinished) private var autoDeleteFinished = false
+    @AppStorage(AppPreference.autoDeleteThreshold) private var autoDeleteThreshold = 100
 
     var body: some View {
         Form {
@@ -86,6 +90,19 @@ private struct GeneralSettingsView: View {
                 Toggle("Keep playing in a miniplayer when going back to the library", isOn: $autoMiniplayer)
                 Toggle("Going back to the library exits full screen", isOn: $libraryExitsFullScreen)
                 Text("Videos fill the window, which resizes to the video's shape and back. Move the pointer over the video to show controls; press F or double-click for full screen. The miniplayer is skipped when a video has finished. With full screen exit off, a window that was already full screen stays that way.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Finished Videos") {
+                Toggle("Delete videos after watching them", isOn: $autoDeleteFinished)
+                Picker("Count a video as watched at", selection: $autoDeleteThreshold) {
+                    ForEach(LibraryStore.autoDeleteThresholds, id: \.self) { percent in
+                        Text(percent == 100 ? "100% (the very end)" : "\(percent)%").tag(percent)
+                    }
+                }
+                .disabled(!autoDeleteFinished)
+                Text("When you leave a video you've watched this far, its file, thumbnail and captions are deleted from disk. A lower margin catches videos you stop during the end credits or outro. Videos you imported by linking them are only removed from the library, never deleted.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
