@@ -85,14 +85,16 @@
       <div class="mdoc-body">
 <p>Click <b>+</b> in the toolbar to open <b>Add Video</b>. Paste a link from YouTube, Nebula or any of the 1,000+ sites yt-dlp supports.</p>
 <dl class="manual-defs">
-  <dt>Save to</dt><dd>Which library to add it to. <b>Downloads Folder</b> saves just the video to <code>~/Downloads</code> as "Title.mp4" without adding it to a library.</dd>
-  <dt>Resolution</dt><dd>The highest resolution to download: Best Available, 4K, 1440p, 1080p (default), 720p or 480p.</dd>
+  <dt>Download</dt><dd><b>Video</b> (default) or <b>Audio (MP3)</b>. Audio saves just the sound as an MP3, with the title, channel and thumbnail built into the file.</dd>
+  <dt>Save to</dt><dd>Which library to add it to. <b>Downloads Folder</b> saves just the file to <code>~/Downloads</code> as "Title.mp4" (or "Title.mp3") without adding it to a library.</dd>
+  <dt>Add to (MP3 only)</dt><dd><b>Videos</b> adds the MP3 to the library like any video (it plays without a picture and shows an <b>MP3</b> badge). <b>Music</b> adds it as a song in the Music tab. Pick either or both. Music needs to be turned on for that library in Settings › Music; see <a href="/manual/music#downloading-songs">Music</a>.</dd>
+  <dt>Resolution</dt><dd>(Video only.) The highest resolution to download: Best Available, 4K, 1440p, 1080p (default), 720p or 480p.</dd>
   <dt>Quality</dt><dd>Balanced (default), Best (allows 60 fps) or Smaller File. The sheet shows what each means.</dd>
   <dt>YouTube sign-in</dt><dd>Shows whether a sign-in is saved; <b>Change…</b> opens the sign-in settings.</dd>
 </dl>
-<p>For a playlist link, you can choose to download the whole playlist or just the one video.</p>
+<p>For a playlist link, you can choose to download the whole playlist or just the one video. If a playlist link is cut off (its playlist ID is too short), Add Video warns you, and if YouTube still can't find the playlist, the panel says only the one video was saved so you can copy the full link and try again.</p>
 <h2 id="the-downloads-panel">The downloads panel</h2>
-<p>The arrow button in the toolbar shows active downloads with their progress, size and speed. The title appears as soon as yt-dlp has found the video. You can cancel any download.</p>
+<p>The arrow button in the toolbar shows active downloads with their progress, size and speed. The title appears as soon as yt-dlp has found the video. You can cancel any download; a cancelled download just disappears from the panel.</p>
 <p>If a download fails, the panel explains what went wrong in plain language with a button that fixes it: sign in, update the tools, choose a different quality or reconnect a library. <b>Details</b> shows yt-dlp's own output.</p>
 <h2 id="how-youtube-downloads-work">How YouTube downloads work</h2>
 <ul>
