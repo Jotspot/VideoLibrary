@@ -23,6 +23,11 @@ final class DownloadTask: Identifiable, @unchecked Sendable {
     /// Set when the download finished but only in low quality because of
     /// YouTube's SABR streaming; keeps the row in the panel with next steps.
     var qualityNotice: QualityNotice?
+    /// A note shown after the download finished (e.g. the playlist link
+    /// didn't work, so only one video was saved); stays until dismissed.
+    var notice: String?
+
+    static let playlistNotRecognizedNotice = "YouTube didn't recognize the playlist in this link, so only the video was downloaded. The link may be cut off: open the playlist on YouTube, copy the full address (or use Share › Copy link) and try again."
     @ObservationIgnored var operation: Task<Void, Never>?
     /// Starts the same download again (set by LibraryStore.startDownload).
     @ObservationIgnored var retry: (() -> Void)?

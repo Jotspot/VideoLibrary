@@ -8,7 +8,8 @@ struct DownloadedFileReferences: Sendable {
 }
 
 enum DownloadedFileLocator {
-    private static let videoExtensions = Set(["mp4", "m4v", "mkv", "webm", "mov", "avi"])
+    // mp3: audio-only downloads ("Audio (MP3)" in Add Video) are library items too.
+    private static let videoExtensions = Set(["mp4", "m4v", "mkv", "webm", "mov", "avi", "mp3"])
     private static let thumbnailExtensions = Set(["jpg", "jpeg", "webp", "png"])
     private static let subtitleExtensions = Set(["vtt", "srt", "ass", "ssa"])
 

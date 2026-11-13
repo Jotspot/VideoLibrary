@@ -2,6 +2,17 @@
 
 VideoLibrary versions are `YY.MM.N`: the year, the month, and the release number within that month.
 
+## 26.11.3 — 2026-11-13
+
+### New
+- **Download audio as MP3.** In Add Video, choose **Audio (MP3)** to save just the sound of a video or a whole playlist, with the title, channel and thumbnail built into each file. Add it to your **Videos**, to **Music** (as songs in the Music tab), or both, or save it to your **Downloads** folder.
+
+### Improved
+- **Cut-off playlist links are caught.** Add Video warns when a playlist link's ID is too short to be real, and if YouTube can't find the playlist, the downloads panel now says only the one video was saved instead of finishing silently.
+
+### Fixed
+- **Cancelling a download no longer shows "no video file was found".** A cancelled download was reported as a failure (and was sometimes started again on its own). It now just leaves the downloads panel.
+
 ## 26.11.2 — 2026-11-05
 
 ### New

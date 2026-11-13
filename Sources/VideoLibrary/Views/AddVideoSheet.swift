@@ -10,6 +10,9 @@ struct AddVideoSheet: View {
     @State private var downloadPlaylist = false
     @State private var libraryID: UUID?
     @State private var tools = ToolsService.shared
+    @State private var audioOnly = false
+    @AppStorage("audioDownloadShowsInVideos") private var audioShowsInVideos = true
+    @AppStorage("audioDownloadAddsToMusic") private var audioAddsToMusic = true
     @AppStorage(AppPreference.resolution) private var resolutionRaw = DownloadResolution.p1080.rawValue
     @AppStorage(AppPreference.quality) private var qualityRaw = DownloadQuality.balanced.rawValue
     @AppStorage(AppPreference.browserCookies) private var browserCookiesRaw = BrowserCookieSource.none.rawValue
@@ -42,11 +45,15 @@ struct AddVideoSheet: View {
                 if let problem = urlProblem {
                     Text(problem).font(.caption).foregroundStyle(.orange)
                 }
+                if let playlistProblem {
+                    Text(playlistProblem).font(.caption).foregroundStyle(.orange)
+                }
                 if looksLikePlaylist {
                     Toggle("Download the whole playlist", isOn: $downloadPlaylist)
                         .toggleStyle(.checkbox)
                     Text(downloadPlaylist
-                         ? "Every video in the playlist becomes its own library card."
+                         ? (audioOnly ? "Every video in the playlist is saved as its own MP3."
+                                      : "Every video in the playlist becomes its own library card.")
                          : "Only the video in this link will be downloaded.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -54,6 +61,11 @@ struct AddVideoSheet: View {
             }
 
             Form {
+                Picker("Download", selection: $audioOnly) {
+                    Text("Video").tag(false)
+                    Text("Audio (MP3)").tag(true)
+                }
+                .pickerStyle(.segmented)
                 Picker("Save to", selection: libraryBinding) {
                     ForEach(store.sortedLibraries) { library in
                         Text(library.isAvailable ? library.name : "\(library.name) (unavailable)")
@@ -63,15 +75,33 @@ struct AddVideoSheet: View {
                     Text("Downloads Folder").tag(Self.downloadsFolderTag)
                 }
                 if savesToDownloads {
-                    Text("Saves just the video file to your Downloads folder. It won't be added to a library.")
+                    Text(audioOnly
+                         ? "Saves just the MP3 file to your Downloads folder. It won't be added to a library."
+                         : "Saves just the video file to your Downloads folder. It won't be added to a library.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Picker("Resolution", selection: $resolutionRaw) {
-                    ForEach(DownloadResolution.allCases) { Text($0.label).tag($0.rawValue) }
+                if audioOnly, !savesToDownloads {
+                    LabeledContent("Add to") {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle("Videos", isOn: $audioShowsInVideos)
+                            Toggle("Music", isOn: musicBinding)
+                                .disabled(musicDestination == nil)
+                        }
+                        .toggleStyle(.checkbox)
+                    }
+                    Text(audioDestinationNote)
+                        .font(.caption)
+                        .foregroundStyle(musicDestinationMissing ? .orange : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Picker("Quality", selection: $qualityRaw) {
-                    ForEach(DownloadQuality.allCases) { Text($0.label).tag($0.rawValue) }
+                if !audioOnly {
+                    Picker("Resolution", selection: $resolutionRaw) {
+                        ForEach(DownloadResolution.allCases) { Text($0.label).tag($0.rawValue) }
+                    }
+                    Picker("Quality", selection: $qualityRaw) {
+                        ForEach(DownloadQuality.allCases) { Text($0.label).tag($0.rawValue) }
+                    }
                 }
                 LabeledContent("YouTube sign-in") {
                     HStack(spacing: 6) {
@@ -110,7 +140,7 @@ struct AddVideoSheet: View {
                 Button("Download", systemImage: "arrow.down.circle", action: startDownload)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(trimmedURL.isEmpty || urlProblem != nil || !(savesToDownloads || selectedLibrary.isAvailable))
+                    .disabled(!canDownload)
             }
         }
         .padding(24)
@@ -138,6 +168,15 @@ struct AddVideoSheet: View {
         return nil
     }
 
+    /// A YouTube playlist ID ("PL" + 16 or 32 characters) that's too short
+    /// to be real: the link was cut off when it was copied.
+    private var playlistProblem: String? {
+        guard let components = URLComponents(string: trimmedURL),
+              let list = components.queryItems?.first(where: { $0.name == "list" })?.value,
+              list.hasPrefix("PL"), list.count < 18 else { return nil }
+        return "This playlist link looks cut off (its playlist ID is too short), so YouTube won't find the playlist. Open the playlist on YouTube and copy the full address."
+    }
+
     private var looksLikePlaylist: Bool {
         trimmedURL.contains("list=") || trimmedURL.contains("/playlist")
     }
@@ -156,6 +195,44 @@ struct AddVideoSheet: View {
                 set: { libraryID = $0 })
     }
 
+    private var musicDestination: MusicDownloadDestination? {
+        MusicSettings.downloadDestination(for: selectedLibrary)
+    }
+
+    private var musicDestinationMissing: Bool { musicDestination == nil && !audioShowsInVideos }
+
+    private var musicBinding: Binding<Bool> {
+        Binding(get: { musicDestination != nil && audioAddsToMusic },
+                set: { audioAddsToMusic = $0 })
+    }
+
+    /// Where an MP3 download goes, as chosen.
+    private var addsToMusic: Bool { audioOnly && !savesToDownloads && musicDestination != nil && audioAddsToMusic }
+    private var showsInVideos: Bool { !audioOnly || savesToDownloads || audioShowsInVideos }
+
+    private var audioDestinationNote: String {
+        guard let musicDestination else {
+            return "To add songs to Music, turn on Music for \(selectedLibrary.name) in Settings › Music."
+        }
+        switch (audioShowsInVideos, audioAddsToMusic) {
+        case (true, true): return "Shows up with your videos and as a song in Music (saved in \(musicDestination.folder.lastPathComponent))."
+        case (false, true): return "Added to Music only, saved in the \(musicDestination.folder.lastPathComponent) folder."
+        case (true, false): return "Shows up with your videos; plays like a video without a picture."
+        case (false, false): return "Choose Videos, Music or both."
+        }
+    }
+
+    private var canDownload: Bool {
+        guard !trimmedURL.isEmpty, urlProblem == nil else { return false }
+        if savesToDownloads { return true }
+        if audioOnly {
+            guard showsInVideos || addsToMusic else { return false }
+            // Music-only with app-wide music doesn't need the library's drive.
+            if !showsInVideos { return true }
+        }
+        return selectedLibrary.isAvailable
+    }
+
     private var cookieSummary: String {
         let source = BrowserCookieSource(rawValue: browserCookiesRaw) ?? .none
         if CookieCache.hasSavedCookies, rememberCookies { return "Saved cookies" }
@@ -163,7 +240,7 @@ struct AddVideoSheet: View {
     }
 
     private func startDownload() {
-        guard !trimmedURL.isEmpty, urlProblem == nil, savesToDownloads || selectedLibrary.isAvailable else { return }
+        guard canDownload else { return }
         store.startDownload(
             url: trimmedURL,
             libraryID: selectedLibrary.id,
@@ -172,7 +249,10 @@ struct AddVideoSheet: View {
             allowsPlaylist: looksLikePlaylist && downloadPlaylist,
             resolution: DownloadResolution(rawValue: resolutionRaw) ?? .p1080,
             quality: DownloadQuality(rawValue: qualityRaw) ?? .balanced,
-            toDownloadsFolder: savesToDownloads
+            toDownloadsFolder: savesToDownloads,
+            audioOnly: audioOnly,
+            toMusic: addsToMusic ? musicDestination : nil,
+            showInVideos: showsInVideos
         )
         dismiss()
     }

@@ -30,6 +30,9 @@ final class MusicLibraryStore {
     // MARK: - Loading
 
     @ObservationIgnored private var replacedObserver: NSObjectProtocol?
+    @ObservationIgnored private var downloadsObserver: NSObjectProtocol?
+    /// A rescan was asked for while one was running; run another after it.
+    @ObservationIgnored private var rescanRequested = false
 
     init() {
         replacedObserver = NotificationCenter.default.addObserver(
@@ -42,6 +45,33 @@ final class MusicLibraryStore {
                 self.load(directory: directory, key: key)
             }
         }
+        downloadsObserver = NotificationCenter.default.addObserver(
+            forName: MusicSettings.songsDownloaded, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let folder = note.userInfo?["folder"] as? URL,
+                  let collection = note.userInfo?["collection"] as? URL else { return }
+            MainActor.assumeIsolated {
+                Self.addDownloadFolder(folder, toCollectionAt: collection, loaded: self)
+            }
+        }
+    }
+
+    /// Lists a music download folder in a collection: in the loaded store if
+    /// that's the collection showing, otherwise straight in its music.json.
+    private static func addDownloadFolder(_ folder: URL, toCollectionAt directory: URL, loaded store: MusicLibraryStore?) {
+        if let store, store.dataDirectory?.standardizedFileURL == directory.standardizedFileURL {
+            Task { await store.addFolders([folder]) }
+            return
+        }
+        let fileURL = directory.appendingPathComponent("music.json")
+        var file = (try? Data(contentsOf: fileURL))
+            .flatMap { try? JSONDecoder().decode(MusicLibraryFile.self, from: $0) }
+            ?? MusicLibraryFile(sources: [], tracks: [], playlists: [])
+        let path = folder.standardizedFileURL.path
+        guard !file.sources.contains(where: { $0.path == path }) else { return }
+        file.sources.append(MusicSource(id: UUID(), name: folder.lastPathComponent, path: path))
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(file) { try? data.write(to: fileURL, options: .atomic) }
     }
 
     /// Switches collection: a library's `.VideoLibrary` folder, the
@@ -104,9 +134,17 @@ final class MusicLibraryStore {
     /// Picks up added, changed and deleted files in every folder. Existing
     /// songs keep their identity, play counts and playlist membership.
     func rescan() async {
-        guard !isScanning, let artworkDirectory else { return }
+        guard let artworkDirectory else { return }
+        guard !isScanning else { rescanRequested = true; return }
         isScanning = true
-        defer { isScanning = false; scanStatus = "" }
+        defer {
+            isScanning = false
+            scanStatus = ""
+            if rescanRequested {
+                rescanRequested = false
+                Task { await rescan() }
+            }
+        }
 
         let existingByPath = Dictionary(tracks.map { ($0.path, $0) }, uniquingKeysWith: { first, _ in first })
         var updated: [Song] = []

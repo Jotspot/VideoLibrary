@@ -159,6 +159,41 @@ enum MusicSettings {
 
     /// Posted when a collection's files are replaced on disk (reload it).
     static let collectionReplaced = Notification.Name("MusicCollectionReplaced")
+
+    /// Where songs downloaded for a library's Music tab go, or nil when
+    /// Music is off for it. App-wide music downloads to ~/Music/VideoLibrary;
+    /// a library's own music to "Downloaded Music" inside that library.
+    static func downloadDestination(for library: LibraryLocation) -> MusicDownloadDestination? {
+        let defaults = UserDefaults.standard
+        let scope = defaults.string(forKey: scopeKey) ?? "library"
+        guard isEnabled(
+            for: library.id,
+            enabled: defaults.bool(forKey: enabledKey),
+            libraryIDs: defaults.string(forKey: librariesKey) ?? "",
+            scope: scope
+        ) else { return nil }
+        if scope == "app" {
+            let music = FileManager.default.urls(for: .musicDirectory, in: .userDomainMask)[0]
+            return MusicDownloadDestination(
+                folder: music.appendingPathComponent("VideoLibrary", isDirectory: true),
+                collectionDirectory: appWideDirectory
+            )
+        }
+        return MusicDownloadDestination(
+            folder: library.url.appendingPathComponent("Downloaded Music", isDirectory: true),
+            collectionDirectory: libraryDirectory(library)
+        )
+    }
+
+    /// Posted after songs were downloaded into a music folder. userInfo:
+    /// "folder" and "collection" (the collection's data directory), as URLs.
+    static let songsDownloaded = Notification.Name("MusicSongsDownloaded")
+}
+
+/// A music download's folder and the collection that should list it.
+struct MusicDownloadDestination: Sendable {
+    let folder: URL
+    let collectionDirectory: URL
 }
 
 enum VideoSortOption: String, CaseIterable, Identifiable, Sendable {
@@ -463,7 +498,10 @@ final class LibraryStore {
                 let height = json["height"] as? Int ?? 0
                 // Use the short side so vertical videos aren't flagged.
                 let shortSide = min(width > 0 ? width : height, height)
-                if let label = LibraryStore.resolutionLabel(shortSide: shortSide) {
+                if item.videoFilePath?.lowercased().hasSuffix(".mp3") == true {
+                    labels[item.id] = "MP3"
+                    continue
+                } else if let label = LibraryStore.resolutionLabel(shortSide: shortSide) {
                     labels[item.id] = label
                 }
                 if !item.ytdlpID.hasPrefix("local-"), json["format_id"] as? String == "18" || (shortSide > 0 && shortSide < min(wanted, 720) * 2 / 3) {
@@ -779,7 +817,10 @@ final class LibraryStore {
         quality: DownloadQuality,
         knownTitle: String? = nil,
         replacingExisting: Bool = false,
-        toDownloadsFolder: Bool = false
+        toDownloadsFolder: Bool = false,
+        audioOnly: Bool = false,
+        toMusic: MusicDownloadDestination? = nil,
+        showInVideos: Bool = true
     ) -> DownloadTask? {
         let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedURL.isEmpty else { return nil }
@@ -811,10 +852,16 @@ final class LibraryStore {
                     .flatMap(DownloadQuality.init(rawValue:)) ?? quality,
                 knownTitle: task?.videoItem?.title ?? knownTitle,
                 replacingExisting: replacingExisting,
-                toDownloadsFolder: toDownloadsFolder
+                toDownloadsFolder: toDownloadsFolder,
+                audioOnly: audioOnly,
+                toMusic: toMusic,
+                showInVideos: showInVideos
             )
         }
-        guard toDownloadsFolder || targetLibrary.isAvailable else {
+        // MP3s can go to the Music tab, the library's video grid, or both.
+        let musicDestination = audioOnly && !toDownloadsFolder ? toMusic : nil
+        let musicOnly = musicDestination != nil && !showInVideos
+        guard toDownloadsFolder || musicOnly || targetLibrary.isAvailable else {
             task.phase = .failed(DownloadFailure(
                 title: "Library unavailable",
                 explanation: unavailableMessage(for: targetLibrary),
@@ -824,17 +871,21 @@ final class LibraryStore {
         }
 
         let libraryID = targetLibrary.id
-        // "Downloads Folder": yt-dlp works in a private temp folder and each
-        // finished video is moved into ~/Downloads; nothing joins a library.
-        let downloadsFolder = toDownloadsFolder
+        // "Downloads Folder" (and Music-only MP3s): yt-dlp works in a private
+        // temp folder and each finished file is moved into ~/Downloads (or
+        // the music folder); nothing joins a library's video grid.
+        let downloadsFolder: URL? = toDownloadsFolder
             ? FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
-            : nil
-        let libraryURL = toDownloadsFolder
+            : (musicOnly ? musicDestination?.folder : nil)
+        // MP3s that go to both Videos and Music: a second copy for Music.
+        let musicCopyFolder = musicOnly ? nil : musicDestination?.folder
+        let usesTemporaryRoot = downloadsFolder != nil
+        let libraryURL = usesTemporaryRoot
             ? FileManager.default.temporaryDirectory.appendingPathComponent("VideoLibrary-\(task.id.uuidString)", isDirectory: true)
             : targetLibrary.url
         let operation = Task {
             defer {
-                if toDownloadsFolder { try? FileManager.default.removeItem(at: libraryURL) }
+                if usesTemporaryRoot { try? FileManager.default.removeItem(at: libraryURL) }
             }
             do {
                 let service = try YtDlpService(outputRoot: libraryURL)
@@ -867,12 +918,13 @@ final class LibraryStore {
                     do {
                         try await self.runDownload(
                             task: task, service: service, url: trimmedURL, libraryID: libraryID,
-                            saveToFolder: downloadsFolder,
+                            saveToFolder: downloadsFolder, copyToFolder: musicCopyFolder,
                             cookiesFromBrowser: cookiesFromBrowser, rememberCookies: rememberCookies,
                             useSignIn: useSignIn, forceOverwrites: replacingExisting,
                             allowsPlaylist: allowsPlaylist, resolution: resolution, quality: quality,
                             playerClient: useSignIn ? preferredClient : nil,
-                            abortOnLowSABR: isYouTube && !allowsPlaylist,
+                            audioOnly: audioOnly,
+                            abortOnLowSABR: isYouTube && !allowsPlaylist && !audioOnly,
                             completedVideoCount: &completedVideoCount,
                             itemsMissingSubtitles: &itemsMissingSubtitles,
                             outcome: &outcome
@@ -923,7 +975,7 @@ final class LibraryStore {
                 // yt-dlp picks a format (before anything downloads); then
                 // other clients are tried, then the optional SABR add-on, and
                 // only if all of those fail is the 360p version downloaded.
-                if sabrLimited || (isYouTube && !allowsPlaylist && outcome.sabrDetected && outcome.isLow(for: resolution)) {
+                if sabrLimited || (isYouTube && !allowsPlaylist && !audioOnly && outcome.sabrDetected && outcome.isLow(for: resolution)) {
                     let recovered = try await self.recoverFromSABR(
                         task: task, service: service, url: trimmedURL, libraryID: libraryID,
                         saveToFolder: downloadsFolder,
@@ -953,22 +1005,34 @@ final class LibraryStore {
                     }
                 }
                 guard completedVideoCount > 0 else { throw YtDlpError.invalidOutput }
-                if let savedFile = outcome.savedFile {
+                if toDownloadsFolder, let savedFile = outcome.savedFile {
                     await MainActor.run { NSWorkspace.shared.activateFileViewerSelecting([savedFile]) }
+                }
+                if let musicDestination {
+                    await MainActor.run {
+                        NotificationCenter.default.post(
+                            name: MusicSettings.songsDownloaded, object: nil,
+                            userInfo: ["folder": musicDestination.folder,
+                                       "collection": musicDestination.collectionDirectory]
+                        )
+                    }
                 }
 
                 await MainActor.run {
                     task.stageNote = nil
                     task.phase = .complete
-                    // A quality notice stays in the panel until dismissed.
-                    if task.qualityNotice == nil {
+                    if allowsPlaylist, outcome.playlistNotRecognized {
+                        task.notice = DownloadTask.playlistNotRecognizedNotice
+                    }
+                    // A notice stays in the panel until dismissed.
+                    if task.qualityNotice == nil, task.notice == nil {
                         self.activeTasks.removeAll { $0.id == task.id }
                     }
                 }
 
                 // Captions are often rate-limited (HTTP 429) right after a video
                 // download. The video is already saved; fetch captions later.
-                if !allowsPlaylist, downloadsFolder == nil, let item = itemsMissingSubtitles.first {
+                if !allowsPlaylist, !audioOnly, downloadsFolder == nil, let item = itemsMissingSubtitles.first {
                     await self.retrySubtitles(
                         for: item,
                         url: trimmedURL,
@@ -1001,6 +1065,7 @@ final class LibraryStore {
         url: String,
         libraryID: UUID,
         saveToFolder: URL?,
+        copyToFolder: URL? = nil,
         cookiesFromBrowser: BrowserCookieSource,
         rememberCookies: Bool,
         useSignIn: Bool,
@@ -1010,6 +1075,7 @@ final class LibraryStore {
         quality: DownloadQuality,
         playerClient: String? = nil,
         useSABR: Bool = false,
+        audioOnly: Bool = false,
         abortOnLowSABR: Bool = false,
         completedVideoCount: inout Int,
         itemsMissingSubtitles: inout [VideoItem],
@@ -1036,17 +1102,23 @@ final class LibraryStore {
 
             outcome.shortSide = infoPath.flatMap(Self.shortSide(ofInfoJSONAt:))
 
-            if let saveToFolder {
-                // Just the video, named after its title, never overwriting.
+            /// Where the file goes in a plain folder: named after its title,
+            /// never overwriting.
+            func destination(in folder: URL) throws -> URL {
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 let ext = (videoPath as NSString).pathExtension
                 let name = item.title
                     .replacingOccurrences(of: "/", with: "-")
                     .replacingOccurrences(of: ":", with: " -")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                let destination = VideoSharingService.uniqueURL(
+                return VideoSharingService.uniqueURL(
                     for: (name.isEmpty ? item.ytdlpID : name) + (ext.isEmpty ? "" : ".\(ext)"),
-                    in: saveToFolder
+                    in: folder
                 )
+            }
+
+            if let saveToFolder {
+                let destination = try destination(in: saveToFolder)
                 let source = URL(fileURLWithPath: videoPath)
                 do {
                     try FileManager.default.moveItem(at: source, to: destination)
@@ -1060,6 +1132,23 @@ final class LibraryStore {
                 currentItem = nil
                 downloadedVideoPath = nil
                 return
+            }
+
+            if let copyToFolder {
+                // The Music tab's copy: a hard link when it's on the same
+                // drive (no extra space), otherwise a real copy. Either way
+                // deleting one doesn't remove the other.
+                do {
+                    let target = try destination(in: copyToFolder)
+                    let source = URL(fileURLWithPath: videoPath)
+                    do {
+                        try FileManager.default.linkItem(at: source, to: target)
+                    } catch {
+                        try FileManager.default.copyItem(at: source, to: target)
+                    }
+                } catch {
+                    DebugLog.write("Couldn't add \(item.ytdlpID) to Music: \(error.localizedDescription)", category: "yt-dlp")
+                }
             }
 
             var completedItem = item
@@ -1097,7 +1186,8 @@ final class LibraryStore {
             resolution: resolution,
             quality: quality,
             playerClient: playerClient,
-            useSABR: useSABR
+            useSABR: useSABR,
+            audioOnly: audioOnly
         ) {
             switch event {
             case .info(var fetchedItem, let totalBytes, let shortSide):
@@ -1137,8 +1227,13 @@ final class LibraryStore {
                 }
             case .sabrDetected:
                 outcome.sabrDetected = true
+            case .playlistNotRecognized:
+                outcome.playlistNotRecognized = true
             }
         }
+        // Cancelling ends the event stream quietly; report it as a
+        // cancellation, not as "no video file was found".
+        try Task.checkCancellation()
         try await finishCurrentItem(preferredVideoPath: downloadedVideoPath)
     }
 
@@ -1153,6 +1248,8 @@ final class LibraryStore {
         var shortSide: Int?
         /// The file saved in Downloads Folder mode.
         var savedFile: URL?
+        /// yt-dlp didn't recognize the playlist and got just the one video.
+        var playlistNotRecognized = false
 
         /// Below 480p when at least 720p was asked for: the 360p fallback.
         func isLow(for resolution: DownloadResolution) -> Bool {

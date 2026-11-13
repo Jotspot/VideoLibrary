@@ -66,6 +66,8 @@ struct DownloadRowView: View {
             DownloadFailureView(task: task, failure: failure)
         } else if let notice = task.qualityNotice, case .complete = task.phase {
             SABRNoticeView(task: task, notice: notice)
+        } else if let notice = task.notice, case .complete = task.phase {
+            DownloadNoticeView(task: task, message: notice)
         } else {
             progressBody
         }
@@ -142,6 +144,46 @@ struct DownloadRowView: View {
 
     private func formatBytes(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+}
+
+/// A download that finished with something worth knowing (e.g. only the
+/// video was saved because the playlist link didn't work).
+private struct DownloadNoticeView: View {
+    @Environment(LibraryStore.self) private var store
+    let task: DownloadTask
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "info.circle.fill")
+                    .foregroundStyle(.yellow)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Downloaded one video, not the playlist")
+                        .font(.subheadline.weight(.semibold))
+                    Text(task.videoItem?.title ?? task.title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Button {
+                    store.activeTasks.removeAll { $0.id == task.id }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Dismiss")
+            }
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 

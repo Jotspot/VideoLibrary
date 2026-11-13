@@ -137,6 +137,9 @@ enum DownloadEvent: Sendable {
     /// yt-dlp warned that YouTube is serving SABR-only streams, so HD
     /// formats may be missing (the result can fall back to 360p).
     case sabrDetected
+    /// yt-dlp couldn't open the playlist in the link (usually a cut-off
+    /// list ID) and downloaded only the video instead.
+    case playlistNotRecognized
 }
 
 // Raw JSON shape emitted by yt-dlp's before-download print hook.
@@ -357,7 +360,8 @@ actor YtDlpService {
         resolution: DownloadResolution,
         quality: DownloadQuality,
         playerClient: String? = nil,
-        useSABR: Bool = false
+        useSABR: Bool = false,
+        audioOnly: Bool = false
     ) -> AsyncThrowingStream<DownloadEvent, Error> {
         AsyncThrowingStream { continuation in
             let worker = Task {
@@ -380,11 +384,28 @@ actor YtDlpService {
                     // videos, slow to print and parse.
                     "--print", "video:\(Self.infoPrefix)%(.{\(Self.infoFields)})j",
                     "--print", "after_move:\(Self.filePrefix)%(filepath)j",
-                    "--no-simulate",
-                    "--format", useSABR
-                        ? self.sabrFormatSelector(resolution: resolution, quality: quality)
-                        : self.formatSelector(resolution: resolution, quality: quality),
-                    "--merge-output-format", "mp4",
+                    "--no-simulate"
+                ]
+                if audioOnly {
+                    // MP3 with the title/artist tags and cover art embedded,
+                    // so the Music tab (and any other player) shows them.
+                    args += [
+                        "--format", "bestaudio/best",
+                        "--extract-audio",
+                        "--audio-format", "mp3",
+                        "--audio-quality", "0",
+                        "--embed-metadata",
+                        "--embed-thumbnail"
+                    ]
+                } else {
+                    args += [
+                        "--format", useSABR
+                            ? self.sabrFormatSelector(resolution: resolution, quality: quality)
+                            : self.formatSelector(resolution: resolution, quality: quality),
+                        "--merge-output-format", "mp4"
+                    ]
+                }
+                args += [
                     "--concurrent-fragments", "4",
                     "--write-thumbnail",
                     "--convert-thumbnails", "jpg",
@@ -451,6 +472,9 @@ actor YtDlpService {
 
                     for try await line in self.runProcess(arguments: args, logContext: logContext, executable: executable) {
                         try Task.checkCancellation()
+                        if line.contains("Unable to recognize playlist") {
+                            continuation.yield(.playlistNotRecognized)
+                        }
                         if !reportedSABR, !useSABR, line.contains("SABR") {
                             reportedSABR = true
                             DebugLog.write("Download \(logContext) SABR detected: \(line)", category: "yt-dlp")
@@ -476,6 +500,9 @@ actor YtDlpService {
                             continuation.yield(.postProcessing)
                         }
                     }
+                    // A cancelled task's stream just ends; don't report that
+                    // as a finished download.
+                    try Task.checkCancellation()
                     DebugLog.write("Download \(logContext) completed.", category: "yt-dlp")
                     self.cleanupTemporaryDownloadDirectory(temporaryDirectory)
                     continuation.finish()
