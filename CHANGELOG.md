@@ -2,6 +2,15 @@
 
 VideoLibrary versions are `YY.MM.N`: the year, the month, and the release number within that month.
 
+## 26.11.4 — 2026-11-16
+
+### New
+- **Add downloaded songs to your playlists.** When an MP3 goes to Music, Add Video now lets you pick a **Playlist** (one of yours, or a new one) and a **Music folder**, so songs can join music you already have instead of always landing in their own "Downloaded Music" folder.
+- **Default resolution in Settings.** Settings › Downloads › **Default resolution** sets what Add Video starts with, including **Audio Only (MP3)**. Picking something else in Add Video now only changes that one download.
+
+### Improved
+- **MP3 is now a Resolution choice.** **Audio Only (MP3)** sits at the bottom of Add Video's Resolution menu instead of a separate Video/Audio switch.
+
 ## 26.11.3 — 2026-11-13
 
 ### New

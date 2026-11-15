@@ -10,7 +10,16 @@ struct AddVideoSheet: View {
     @State private var downloadPlaylist = false
     @State private var libraryID: UUID?
     @State private var tools = ToolsService.shared
-    @State private var audioOnly = false
+    /// The Resolution picker's choice: a DownloadResolution raw value, or
+    /// `mp3Tag` for audio only. Starts at the default from Settings.
+    @State private var format = AddVideoSheet.defaultFormat
+    /// Where MP3s for Music go: nil is the default "Downloaded Music" folder.
+    @State private var musicFolder: URL?
+    @State private var playlistChoice = PlaylistChoice.none
+    @State private var newPlaylistName = ""
+    /// The Music collection's folders and playlists, read once per library.
+    @State private var folderChoices: [(folder: URL, name: String)] = []
+    @State private var playlistChoices: [MusicPlaylist] = []
     @AppStorage("audioDownloadShowsInVideos") private var audioShowsInVideos = true
     @AppStorage("audioDownloadAddsToMusic") private var audioAddsToMusic = true
     @AppStorage(AppPreference.resolution) private var resolutionRaw = DownloadResolution.p1080.rawValue
@@ -61,11 +70,6 @@ struct AddVideoSheet: View {
             }
 
             Form {
-                Picker("Download", selection: $audioOnly) {
-                    Text("Video").tag(false)
-                    Text("Audio (MP3)").tag(true)
-                }
-                .pickerStyle(.segmented)
                 Picker("Save to", selection: libraryBinding) {
                     ForEach(store.sortedLibraries) { library in
                         Text(library.isAvailable ? library.name : "\(library.name) (unavailable)")
@@ -81,6 +85,16 @@ struct AddVideoSheet: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                Picker("Resolution", selection: $format) {
+                    ForEach(DownloadResolution.allCases) { Text($0.label).tag($0.rawValue) }
+                    Divider()
+                    Text("Audio Only (MP3)").tag(Self.mp3Tag)
+                }
+                if !audioOnly {
+                    Picker("Quality", selection: $qualityRaw) {
+                        ForEach(DownloadQuality.allCases) { Text($0.label).tag($0.rawValue) }
+                    }
+                }
                 if audioOnly, !savesToDownloads {
                     LabeledContent("Add to") {
                         VStack(alignment: .leading, spacing: 4) {
@@ -94,13 +108,8 @@ struct AddVideoSheet: View {
                         .font(.caption)
                         .foregroundStyle(musicDestinationMissing ? .orange : .secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                }
-                if !audioOnly {
-                    Picker("Resolution", selection: $resolutionRaw) {
-                        ForEach(DownloadResolution.allCases) { Text($0.label).tag($0.rawValue) }
-                    }
-                    Picker("Quality", selection: $qualityRaw) {
-                        ForEach(DownloadQuality.allCases) { Text($0.label).tag($0.rawValue) }
+                    if addsToMusic {
+                        musicPickers
                     }
                 }
                 LabeledContent("YouTube sign-in") {
@@ -145,6 +154,15 @@ struct AddVideoSheet: View {
         }
         .padding(24)
         .frame(width: 520)
+        .task(id: musicDestination?.collectionDirectory) {
+            // A different library has its own folders and playlists.
+            folderChoices = musicDestination?.folderChoices() ?? []
+            playlistChoices = musicDestination?.playlistChoices() ?? []
+            if let musicFolder, !folderChoices.contains(where: { $0.folder == musicFolder }) { self.musicFolder = nil }
+            if case .existing(let id) = playlistChoice, !playlistChoices.contains(where: { $0.id == id }) {
+                playlistChoice = .none
+            }
+        }
         .task {
             if urlText.isEmpty,
                let clip = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -153,6 +171,58 @@ struct AddVideoSheet: View {
             }
             await tools.refresh()
         }
+    }
+
+    @ViewBuilder
+    private var musicPickers: some View {
+        Picker("Music folder", selection: $musicFolder) {
+            ForEach(Array(folderChoices.enumerated()), id: \.offset) { index, choice in
+                Text(index == 0 ? "\(choice.name) (default)" : choice.name)
+                    .tag(index == 0 ? nil : Optional(choice.folder))
+            }
+        }
+        Picker("Playlist", selection: $playlistChoice) {
+            Text("None").tag(PlaylistChoice.none)
+            if !playlistChoices.isEmpty {
+                Divider()
+                ForEach(playlistChoices) { Text($0.name).tag(PlaylistChoice.existing($0.id)) }
+            }
+            Divider()
+            Text("New Playlist…").tag(PlaylistChoice.new)
+        }
+        if playlistChoice == .new {
+            TextField("Playlist name", text: $newPlaylistName, prompt: Text("New playlist name"))
+        }
+    }
+
+    /// The Resolution picker's tag for "Audio Only (MP3)".
+    static let mp3Tag = "mp3"
+
+    /// The Resolution choice Add Video starts with, from Settings.
+    static var defaultFormat: String {
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: AppPreference.defaultsToAudio) { return mp3Tag }
+        return defaults.string(forKey: AppPreference.resolution) ?? DownloadResolution.p1080.rawValue
+    }
+
+    private var audioOnly: Bool { format == Self.mp3Tag }
+
+    private enum PlaylistChoice: Hashable {
+        case none, new, existing(UUID)
+    }
+
+    /// The Music destination with the chosen folder and playlist.
+    private var chosenMusicDestination: MusicDownloadDestination? {
+        guard addsToMusic, var destination = musicDestination else { return nil }
+        if let musicFolder { destination.folder = musicFolder }
+        switch playlistChoice {
+        case .none: destination.playlist = nil
+        case .existing(let id): destination.playlist = .existing(id)
+        case .new:
+            let name = newPlaylistName.trimmingCharacters(in: .whitespacesAndNewlines)
+            destination.playlist = name.isEmpty ? nil : .new(name)
+        }
+        return destination
     }
 
     private var trimmedURL: String {
@@ -214,9 +284,10 @@ struct AddVideoSheet: View {
         guard let musicDestination else {
             return "To add songs to Music, turn on Music for \(selectedLibrary.name) in Settings › Music."
         }
+        let folder = (musicFolder ?? musicDestination.folder).lastPathComponent
         switch (audioShowsInVideos, audioAddsToMusic) {
-        case (true, true): return "Shows up with your videos and as a song in Music (saved in \(musicDestination.folder.lastPathComponent))."
-        case (false, true): return "Added to Music only, saved in the \(musicDestination.folder.lastPathComponent) folder."
+        case (true, true): return "Shows up with your videos and as a song in Music (saved in \(folder))."
+        case (false, true): return "Added to Music only, saved in the \(folder) folder."
         case (true, false): return "Shows up with your videos; plays like a video without a picture."
         case (false, false): return "Choose Videos, Music or both."
         }
@@ -230,6 +301,8 @@ struct AddVideoSheet: View {
             // Music-only with app-wide music doesn't need the library's drive.
             if !showsInVideos { return true }
         }
+        if addsToMusic, playlistChoice == .new,
+           newPlaylistName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
         return selectedLibrary.isAvailable
     }
 
@@ -247,11 +320,11 @@ struct AddVideoSheet: View {
             cookiesFromBrowser: BrowserCookieSource(rawValue: browserCookiesRaw) ?? .none,
             rememberCookies: rememberCookies,
             allowsPlaylist: looksLikePlaylist && downloadPlaylist,
-            resolution: DownloadResolution(rawValue: resolutionRaw) ?? .p1080,
+            resolution: DownloadResolution(rawValue: format) ?? DownloadResolution(rawValue: resolutionRaw) ?? .p1080,
             quality: DownloadQuality(rawValue: qualityRaw) ?? .balanced,
             toDownloadsFolder: savesToDownloads,
             audioOnly: audioOnly,
-            toMusic: addsToMusic ? musicDestination : nil,
+            toMusic: chosenMusicDestination,
             showInVideos: showsInVideos
         )
         dismiss()

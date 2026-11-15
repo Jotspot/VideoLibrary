@@ -50,28 +50,42 @@ final class MusicLibraryStore {
         ) { [weak self] note in
             guard let folder = note.userInfo?["folder"] as? URL,
                   let collection = note.userInfo?["collection"] as? URL else { return }
+            let files = note.userInfo?["files"] as? [String] ?? []
+            let playlist = note.userInfo?["playlist"] as? MusicDownloadPlaylist
             MainActor.assumeIsolated {
-                Self.addDownloadFolder(folder, toCollectionAt: collection, loaded: self)
+                Self.addDownload(folder: folder, files: files, playlist: playlist,
+                                 toCollectionAt: collection, loaded: self)
             }
         }
     }
 
-    /// Lists a music download folder in a collection: in the loaded store if
-    /// that's the collection showing, otherwise straight in its music.json.
-    private static func addDownloadFolder(_ folder: URL, toCollectionAt directory: URL, loaded store: MusicLibraryStore?) {
+    /// Lists a music download in a collection: its folder (unless it's
+    /// already inside an added folder) and, if one was chosen, its songs in
+    /// a playlist. Uses the loaded store if that's the collection showing,
+    /// otherwise its music.json; the songs join the playlist after a scan.
+    private static func addDownload(folder: URL, files: [String], playlist: MusicDownloadPlaylist?,
+                                    toCollectionAt directory: URL, loaded store: MusicLibraryStore?) {
         if let store, store.dataDirectory?.standardizedFileURL == directory.standardizedFileURL {
-            Task { await store.addFolders([folder]) }
+            var file = MusicLibraryFile(sources: store.sources, tracks: store.tracks, playlists: store.playlists)
+            if let playlist { file.queue(files, for: playlist) }
+            store.playlists = file.playlists
+            if file.covers(folder) {
+                store.save()
+                Task { await store.rescan() }
+            } else {
+                Task { await store.addFolders([folder]) }
+            }
             return
         }
-        let fileURL = directory.appendingPathComponent("music.json")
-        var file = (try? Data(contentsOf: fileURL))
-            .flatMap { try? JSONDecoder().decode(MusicLibraryFile.self, from: $0) }
-            ?? MusicLibraryFile(sources: [], tracks: [], playlists: [])
-        let path = folder.standardizedFileURL.path
-        guard !file.sources.contains(where: { $0.path == path }) else { return }
-        file.sources.append(MusicSource(id: UUID(), name: folder.lastPathComponent, path: path))
+        var file = MusicLibraryFile.read(from: directory)
+        if let playlist { file.queue(files, for: playlist) }
+        if !file.covers(folder) {
+            file.sources.append(MusicSource(id: UUID(), name: folder.lastPathComponent, path: folder.standardizedFileURL.path))
+        }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        if let data = try? JSONEncoder().encode(file) { try? data.write(to: fileURL, options: .atomic) }
+        if let data = try? JSONEncoder().encode(file) {
+            try? data.write(to: directory.appendingPathComponent("music.json"), options: .atomic)
+        }
     }
 
     /// Switches collection: a library's `.VideoLibrary` folder, the
@@ -195,8 +209,22 @@ final class MusicLibraryStore {
         var seen = Set<String>()
         tracks = updated.filter { seen.insert($0.path).inserted }
         let valid = Set(tracks.map(\.id))
+        let idsByPath = Dictionary(tracks.map { (URL(fileURLWithPath: $0.path).standardizedFileURL.path, $0.id) }, uniquingKeysWith: { first, _ in first })
         for index in playlists.indices {
             playlists[index].trackIDs.removeAll { !valid.contains($0) }
+            // Downloaded songs waiting for this playlist join once scanned;
+            // ones not found yet (a scan still to come) keep waiting.
+            if let pending = playlists[index].pendingPaths {
+                var waiting: [String] = []
+                for path in pending {
+                    if let id = idsByPath[path] {
+                        if !playlists[index].trackIDs.contains(id) { playlists[index].trackIDs.append(id) }
+                    } else if FileManager.default.fileExists(atPath: path) {
+                        waiting.append(path)
+                    }
+                }
+                playlists[index].pendingPaths = waiting.isEmpty ? nil : waiting
+            }
         }
         save()
     }

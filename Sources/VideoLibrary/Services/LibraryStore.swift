@@ -192,8 +192,50 @@ enum MusicSettings {
 
 /// A music download's folder and the collection that should list it.
 struct MusicDownloadDestination: Sendable {
-    let folder: URL
+    var folder: URL
     let collectionDirectory: URL
+    /// A playlist to add the downloaded songs to, if one was chosen.
+    var playlist: MusicDownloadPlaylist?
+
+    /// The folders of this collection a download can be saved into: the
+    /// default "Downloaded Music" folder first, then every added music
+    /// folder and each subfolder of it that holds songs.
+    func folderChoices() -> [(folder: URL, name: String)] {
+        let file = MusicLibraryFile.read(from: collectionDirectory)
+        var seen: Set<String> = [folder.standardizedFileURL.path]
+        var choices = [(folder: folder, name: folder.lastPathComponent)]
+        for source in file.sources {
+            let root = source.path.hasSuffix("/") ? source.path : source.path + "/"
+            var paths: Set<String> = [source.path]
+            for track in file.tracks where track.sourceID == source.id && track.path.hasPrefix(root) {
+                var directory = (track.path as NSString).deletingLastPathComponent
+                while directory.count >= source.path.count, directory.hasPrefix(source.path) {
+                    paths.insert(directory)
+                    directory = (directory as NSString).deletingLastPathComponent
+                }
+            }
+            for path in paths.sorted(by: { $0.localizedStandardCompare($1) == .orderedAscending })
+            where seen.insert(path).inserted {
+                // Subfolders read "Folder › Sub" so same-named ones differ.
+                let relative = String(path.dropFirst(source.path.count)).split(separator: "/")
+                let name = ([source.name] + relative.map(String.init)).joined(separator: " › ")
+                choices.append((URL(fileURLWithPath: path, isDirectory: true), name))
+            }
+        }
+        return choices
+    }
+
+    /// This collection's playlists, to offer as a place for new songs.
+    func playlistChoices() -> [MusicPlaylist] {
+        MusicLibraryFile.read(from: collectionDirectory).playlists
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+}
+
+/// The playlist downloaded songs join: an existing one, or a new one.
+enum MusicDownloadPlaylist: Sendable, Hashable {
+    case existing(UUID)
+    case new(String)
 }
 
 enum VideoSortOption: String, CaseIterable, Identifiable, Sendable {
@@ -846,8 +888,8 @@ final class LibraryStore {
                     .flatMap(BrowserCookieSource.init(rawValue:)) ?? cookiesFromBrowser,
                 rememberCookies: defaults.object(forKey: AppPreference.rememberCookies) as? Bool ?? rememberCookies,
                 allowsPlaylist: allowsPlaylist,
-                resolution: defaults.string(forKey: AppPreference.resolution)
-                    .flatMap(DownloadResolution.init(rawValue:)) ?? resolution,
+                // The resolution chosen for this download, not the default.
+                resolution: resolution,
                 quality: defaults.string(forKey: AppPreference.quality)
                     .flatMap(DownloadQuality.init(rawValue:)) ?? quality,
                 knownTitle: task?.videoItem?.title ?? knownTitle,
@@ -1013,7 +1055,9 @@ final class LibraryStore {
                         NotificationCenter.default.post(
                             name: MusicSettings.songsDownloaded, object: nil,
                             userInfo: ["folder": musicDestination.folder,
-                                       "collection": musicDestination.collectionDirectory]
+                                       "collection": musicDestination.collectionDirectory,
+                                       "files": outcome.savedFiles,
+                                       "playlist": musicDestination.playlist as Any]
                         )
                     }
                 }
@@ -1127,6 +1171,7 @@ final class LibraryStore {
                 }
                 completedVideoCount += 1
                 outcome.savedFile = destination
+                outcome.savedFiles.append(destination.standardizedFileURL.path)
                 let finalizedCount = completedVideoCount
                 await MainActor.run { task.completedVideoCount = finalizedCount }
                 currentItem = nil
@@ -1146,6 +1191,7 @@ final class LibraryStore {
                     } catch {
                         try FileManager.default.copyItem(at: source, to: target)
                     }
+                    outcome.savedFiles.append(target.standardizedFileURL.path)
                 } catch {
                     DebugLog.write("Couldn't add \(item.ytdlpID) to Music: \(error.localizedDescription)", category: "yt-dlp")
                 }
@@ -1248,6 +1294,8 @@ final class LibraryStore {
         var shortSide: Int?
         /// The file saved in Downloads Folder mode.
         var savedFile: URL?
+        /// Every file saved to the Downloads or music folder (or copied there).
+        var savedFiles: [String] = []
         /// yt-dlp didn't recognize the playlist and got just the one video.
         var playlistNotRecognized = false
 

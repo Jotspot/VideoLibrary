@@ -70,6 +70,9 @@ struct MusicPlaylist: Identifiable, Codable, Hashable, Sendable {
     var name: String
     var trackIDs: [UUID]
     var dateCreated: Date
+    /// Downloaded songs waiting to join: file paths that become tracks
+    /// once their folder has been scanned (optional so old files decode).
+    var pendingPaths: [String]?
 }
 
 /// Everything persisted for one library: `.VideoLibrary/music.json`.
@@ -77,6 +80,38 @@ struct MusicLibraryFile: Codable, Sendable {
     var sources: [MusicSource] = []
     var tracks: [Song] = []
     var playlists: [MusicPlaylist] = []
+
+    /// The collection in `directory`'s music.json, or an empty one.
+    static func read(from directory: URL) -> MusicLibraryFile {
+        (try? Data(contentsOf: directory.appendingPathComponent("music.json")))
+            .flatMap { try? JSONDecoder().decode(MusicLibraryFile.self, from: $0) }
+            ?? MusicLibraryFile()
+    }
+
+    /// Queues downloaded files for a playlist (creating it for `.new`).
+    mutating func queue(_ paths: [String], for choice: MusicDownloadPlaylist) {
+        guard !paths.isEmpty else { return }
+        let index: Int
+        switch choice {
+        case .existing(let id):
+            guard let found = playlists.firstIndex(where: { $0.id == id }) else { return }
+            index = found
+        case .new(let name):
+            if let found = playlists.firstIndex(where: { $0.name == name }) {
+                index = found
+            } else {
+                playlists.append(MusicPlaylist(id: UUID(), name: name, trackIDs: [], dateCreated: Date()))
+                index = playlists.count - 1
+            }
+        }
+        playlists[index].pendingPaths = (playlists[index].pendingPaths ?? []) + paths
+    }
+
+    /// Whether `folder` is an added folder or inside one.
+    func covers(_ folder: URL) -> Bool {
+        let path = folder.standardizedFileURL.path
+        return sources.contains { path == $0.path || path.hasPrefix($0.path.hasSuffix("/") ? $0.path : $0.path + "/") }
+    }
 }
 
 /// An album built from tracks (not stored).

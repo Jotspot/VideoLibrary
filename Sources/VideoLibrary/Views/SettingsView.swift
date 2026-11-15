@@ -16,6 +16,8 @@ enum AppPreference {
     static let libraryExitsFullScreen = "playerLibraryExitsFullScreen"
     static let resolution = "downloadResolution"
     static let quality = "downloadQuality"
+    /// Add Video starts on "Audio Only (MP3)" instead of a resolution.
+    static let defaultsToAudio = "downloadDefaultsToAudio"
     static let browserCookies = "browserCookies"
     static let rememberCookies = "rememberCookies"
     static let suggestionsLibraryID = "suggestionsDownloadLibraryID"
@@ -350,13 +352,37 @@ private struct CaptionSettingsView: View {
 private struct DownloadSettingsView: View {
     @AppStorage(AppPreference.resolution) private var resolutionRaw = DownloadResolution.p1080.rawValue
     @AppStorage(AppPreference.quality) private var qualityRaw = DownloadQuality.balanced.rawValue
+    @AppStorage(AppPreference.defaultsToAudio) private var defaultsToAudio = false
+
+    /// "Default resolution" covers MP3 too: picking it keeps the video
+    /// resolution (used for re-downloads) and just starts Add Video on MP3.
+    private var defaultFormat: Binding<String> {
+        Binding(
+            get: { defaultsToAudio ? AddVideoSheet.mp3Tag : resolutionRaw },
+            set: { value in
+                if value == AddVideoSheet.mp3Tag {
+                    defaultsToAudio = true
+                } else {
+                    defaultsToAudio = false
+                    resolutionRaw = value
+                }
+            }
+        )
+    }
 
     var body: some View {
         Form {
             Section("Quality") {
-                Picker("Resolution", selection: $resolutionRaw) {
+                Picker("Default resolution", selection: defaultFormat) {
                     ForEach(DownloadResolution.allCases) { Text($0.label).tag($0.rawValue) }
+                    Divider()
+                    Text("Audio Only (MP3)").tag(AddVideoSheet.mp3Tag)
                 }
+                Text(defaultsToAudio
+                     ? "Add Video starts on Audio Only (MP3). You can pick a resolution for each download."
+                     : "What Add Video starts with. You can pick a different resolution (or MP3) for each download.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Picker("Quality", selection: $qualityRaw) {
                     ForEach(DownloadQuality.allCases) { Text($0.label).tag($0.rawValue) }
                 }
